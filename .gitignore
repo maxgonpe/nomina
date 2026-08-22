@@ -1,0 +1,194 @@
+# ==============================
+# PYTHON GENERAL
+# ==============================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Translations
+*.mo
+*.pot
+
+# Pytest, coverage, tox, etc.
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+cover/
+
+# MyPy, Pyre, Pytype
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# Ruff
+.ruff_cache/
+
+# ==============================
+# ENTORNOS VIRTUALES
+# ==============================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+.pdm-python
+.pdm-build/
+.pixi
+__pypackages__/
+
+# ==============================
+# BASES DE DATOS (LOCALES)
+# ==============================
+db.sqlite3
+db.sqlite3-journal
+*.db
+*.rdb
+*.aof
+*.pid
+
+# ==============================
+# DJANGO ESPECÍFICO
+# ==============================
+# Logs
+*.log
+
+# Configuración local (nunca versionar)
+local_settings.py
+nomina/local_settings.py
+/settings/local.py
+/settings/production.py   # si contiene secretos
+
+# Archivos de migraciones (se recomienda versionarlas, pero si no quieres, descomenta)
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Directorios de archivos generados
+/media/
+/static/
+/staticfiles/
+/static_root/
+
+# ==============================
+# ARCHIVOS DE ENTORNO Y SECRETOS
+# ==============================
+.env
+.env.local
+.env.*.local
+.espaciometro/
+.streamlit/secrets.toml
+.pypirc
+
+# ==============================
+# EDITORES / IDE / SISTEMA
+# ==============================
+# Visual Studio Code
+.vscode/
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos temporales de editor
+*.swp
+*.swo
+*~
+
+# ==============================
+# OTROS (opcionales, según necesidad)
+# ==============================
+# Archivos de datos de ejemplo
+*.csv
+*.xlsx
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Abstra
+.abstra/
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis, RabbitMQ, etc.
+mnesia/
+rabbitmq/
+rabbitmq-data/
+activemq-data/
+
+# Sphinx docs
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Pipenv / Poetry / PDM / UV (los lockfiles normalmente se versionan, por eso están comentados)
+# Pipfile.lock
+# poetry.lock
+# pdm.lock
+# uv.lock
