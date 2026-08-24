@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Conceptos de remuneración{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Conceptos de remuneración</h1>
+  {% if perms.remuneraciones.add_conceptoremuneracion %}
+    <a class="btn btn-primary" href="{% url 'remuneraciones:concepto_crear' %}">Nuevo concepto</a>
+  {% endif %}
+</div>
+
+<p class="text-muted">
+  Un haber o descuento nuevo (por ejemplo un bono de faena) se agrega aquí.
+  No hay que cambiar las columnas de la liquidación mensual.
+</p>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código o nombre">
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="tipo">
+      <option value="">Todos los tipos</option>
+      {% for value, label in tipos %}
+        <option value="{{ value }}" {% if tipo == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-flex align-items-center">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="incluir_inactivos" value="1" id="inactivos"
+             {% if incluir_inactivos %}checked{% endif %}>
+      <label class="form-check-label" for="inactivos">Incluir inactivos</label>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Cálculo</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for concepto in conceptos %}
+          <tr>
+            <td><code>{{ concepto.codigo }}</code></td>
+            <td>
+              {% if perms.remuneraciones.change_conceptoremuneracion %}
+                <a href="{% url 'remuneraciones:concepto_editar' concepto.pk %}">{{ concepto.nombre }}</a>
+              {% else %}
+                {{ concepto.nombre }}
+              {% endif %}
+            </td>
+            <td>{{ concepto.get_tipo_display }}</td>
+            <td>{{ concepto.get_naturaleza_calculo_display }}</td>
+            <td>
+              {% if concepto.activo %}
+                <span class="badge text-bg-success">Activo</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Inactivo</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-muted">No hay conceptos para mostrar.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

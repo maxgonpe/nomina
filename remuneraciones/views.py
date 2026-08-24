@@ -4,7 +4,9 @@ from django.contrib.auth.mixins import (
     PermissionRequiredMixin,
 )
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import (
@@ -15,8 +17,12 @@ from django.views.generic import (
 )
 
 from core.mixins import AuditFormMixin
-from remuneraciones.forms import PeriodoForm, ReaperturaPeriodoForm
-from remuneraciones.models import PeriodoRemuneracion
+from remuneraciones.forms import (
+    ConceptoRemuneracionForm,
+    PeriodoForm,
+    ReaperturaPeriodoForm,
+)
+from remuneraciones.models import ConceptoRemuneracion, PeriodoRemuneracion
 from remuneraciones.services.periodos import (
     acciones_disponibles,
     abrir,
@@ -264,3 +270,80 @@ class PeriodoReabrirView(
                 "remuneraciones/periodos/reabrir.html",
                 {"periodo": periodo, "form": form},
             )
+
+
+class ConceptoListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
+    permission_required = "remuneraciones.view_conceptoremuneracion"
+    model = ConceptoRemuneracion
+    paginate_by = 50
+    template_name = "remuneraciones/conceptos/lista.html"
+    context_object_name = "conceptos"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.GET.get("incluir_inactivos") != "1":
+            qs = qs.filter(activo=True)
+        tipo = self.request.GET.get("tipo", "").strip()
+        if tipo:
+            qs = qs.filter(tipo=tipo)
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(
+                Q(codigo__icontains=q) | Q(nombre__icontains=q)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q"] = self.request.GET.get("q", "").strip()
+        context["tipo"] = self.request.GET.get("tipo", "").strip()
+        context["tipos"] = ConceptoRemuneracion.Tipo.choices
+        context["incluir_inactivos"] = (
+            self.request.GET.get("incluir_inactivos") == "1"
+        )
+        return context
+
+
+class ConceptoCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    CreateView,
+):
+    permission_required = "remuneraciones.add_conceptoremuneracion"
+    model = ConceptoRemuneracion
+    form_class = ConceptoRemuneracionForm
+    template_name = "remuneraciones/conceptos/form.html"
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            "Concepto creado. No se modificó la tabla de liquidaciones.",
+        )
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("remuneraciones:concepto_lista")
+
+
+class ConceptoUpdateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    UpdateView,
+):
+    permission_required = "remuneraciones.change_conceptoremuneracion"
+    model = ConceptoRemuneracion
+    form_class = ConceptoRemuneracionForm
+    template_name = "remuneraciones/conceptos/form.html"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Concepto actualizado.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("remuneraciones:concepto_lista")

@@ -16,6 +16,8 @@
           <a class="nav-link" href="{% url 'rrhh:cargo_lista' %}">Cargos</a>
           <a class="nav-link" href="{% url 'rrhh:contrato_lista' %}">Contratos</a>
           <a class="nav-link" href="{% url 'remuneraciones:periodo_lista' %}">Períodos</a>
+          <a class="nav-link" href="{% url 'remuneraciones:concepto_lista' %}">Conceptos</a>
+          <a class="nav-link" href="{% url 'core:parametro_lista' %}">Parámetros</a>
           {% if user.is_staff %}
             <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
           {% endif %}

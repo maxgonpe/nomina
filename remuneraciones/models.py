@@ -237,6 +237,9 @@ class ConceptoRemuneracion(AuditModel):
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
 
+    def get_absolute_url(self):
+        return reverse("remuneraciones:concepto_editar", args=[self.pk])
+
 
 class LiquidacionMensual(AuditModel):
 

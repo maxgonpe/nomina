@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar concepto{% else %}Nuevo concepto{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if form.instance.pk %}Editar concepto{% else %}Nuevo concepto{% endif %}</h1>
+<p class="text-muted">
+  El código identifica el concepto en movimientos e importación Excel (p. ej. BONO_FAENA).
+  No se agrega una columna a la liquidación.
+</p>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.codigo.id_for_label }}">Código</label>
+          {{ form.codigo }}
+          {% if form.codigo.errors %}<div class="text-danger small">{{ form.codigo.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-8 mb-3">
+          <label class="form-label" for="{{ form.nombre.id_for_label }}">Nombre</label>
+          {{ form.nombre }}
+          {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo</label>
+          {{ form.tipo }}
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.naturaleza_calculo.id_for_label }}">Naturaleza del cálculo</label>
+          {{ form.naturaleza_calculo }}
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.orden.id_for_label }}">Orden</label>
+          {{ form.orden }}
+        </div>
+      </div>
+      <div class="form-check mb-2">
+        {{ form.proporcional_dias }}
+        <label class="form-check-label" for="{{ form.proporcional_dias.id_for_label }}">Proporcional a días trabajados</label>
+      </div>
+      <div class="form-check mb-2">
+        {{ form.editable }}
+        <label class="form-check-label" for="{{ form.editable.id_for_label }}">Editable en la liquidación</label>
+      </div>
+      <div class="form-check mb-3">
+        {{ form.activo }}
+        <label class="form-check-label" for="{{ form.activo.id_for_label }}">Activo</label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+        {{ form.descripcion }}
+      </div>
+      <button class="btn btn-primary" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:concepto_lista' %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

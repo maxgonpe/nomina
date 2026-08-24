@@ -50,4 +50,19 @@ urlpatterns = [
         views.PeriodoReabrirView.as_view(),
         name="periodo_reabrir",
     ),
+    path(
+        "conceptos/",
+        views.ConceptoListView.as_view(),
+        name="concepto_lista",
+    ),
+    path(
+        "conceptos/nuevo/",
+        views.ConceptoCreateView.as_view(),
+        name="concepto_crear",
+    ),
+    path(
+        "conceptos/<int:pk>/editar/",
+        views.ConceptoUpdateView.as_view(),
+        name="concepto_editar",
+    ),
 ]

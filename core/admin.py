@@ -32,3 +32,14 @@ class ParametroNegocioAdmin(admin.ModelAdmin):
     list_filter = ("activo",)
     search_fields = ("codigo", "nombre")
     inlines = [ParametroValorInline]
+
+
+@admin.register(ParametroValor)
+class ParametroValorAdmin(admin.ModelAdmin):
+    list_display = (
+        "parametro",
+        "valor",
+        "vigencia_desde",
+        "vigencia_hasta",
+    )
+    list_filter = ("parametro",)
