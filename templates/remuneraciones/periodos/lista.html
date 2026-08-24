@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load l10n %}
+{% block title %}Períodos de remuneración{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Períodos de remuneración</h1>
+  {% if perms.remuneraciones.add_periodoremuneracion %}
+    <a class="btn btn-primary" href="{% url 'remuneraciones:periodo_crear' %}">Nuevo período</a>
+  {% endif %}
+</div>
+
+<p class="text-muted">
+  Un período se abre en este sistema. Tener la hoja en Excel (por ejemplo SEPTIEMBRE) no lo deja abierto.
+</p>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <label class="form-label" for="anio">Año</label>
+    <select class="form-select" name="anio" id="anio">
+      <option value="">Todos</option>
+      {% for y in anios %}
+        <option value="{{ y|unlocalize }}" {% if anio == y|stringformat:"d" %}selected{% endif %}>{{ y|unlocalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label" for="estado">Estado</label>
+    <select class="form-select" name="estado" id="estado">
+      <option value="">Todos</option>
+      {% for value, label in estados %}
+        <option value="{{ value }}" {% if estado == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4 d-flex align-items-end">
+    <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Período</th>
+          <th>Inicio</th>
+          <th>Término</th>
+          <th>Estado</th>
+          <th>Hoja Excel</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for periodo in periodos %}
+          <tr>
+            <td>
+              <a href="{% url 'remuneraciones:periodo_detalle' periodo.pk %}">{{ periodo.nombre }}</a>
+            </td>
+            <td>{{ periodo.fecha_inicio|date:"d-m-Y" }}</td>
+            <td>{{ periodo.fecha_fin|date:"d-m-Y" }}</td>
+            <td>
+              {% if periodo.estado == "CERRADO" %}
+                <span class="badge text-bg-dark">{{ periodo.get_estado_display }}</span>
+              {% elif periodo.estado == "ABIERTO" %}
+                <span class="badge text-bg-primary">{{ periodo.get_estado_display }}</span>
+              {% elif periodo.estado == "VALIDADO" %}
+                <span class="badge text-bg-success">{{ periodo.get_estado_display }}</span>
+              {% elif periodo.estado == "CALCULADO" %}
+                <span class="badge text-bg-info">{{ periodo.get_estado_display }}</span>
+              {% else %}
+                <span class="badge text-bg-secondary">{{ periodo.get_estado_display }}</span>
+              {% endif %}
+            </td>
+            <td><code>{{ periodo.nombre_hoja_excel }}</code></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-muted">No hay períodos. Créelos según se procese cada mes; no hace falta copiar el Excel.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

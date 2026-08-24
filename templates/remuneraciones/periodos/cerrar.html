@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Cerrar {{ periodo.nombre }}{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h1 class="h4">Cerrar {{ periodo.nombre }}</h1>
+    <p>
+      El cierre bloquea horas extra, movimientos, recálculo de liquidaciones y finiquitos.
+      Solo se permite si el período está <strong>validado</strong> y no hay liquidaciones en borrador ni pendientes de recálculo.
+    </p>
+    {% if not acciones.cerrar %}
+      <div class="alert alert-warning">
+        Este período está en estado {{ periodo.get_estado_display }} y no se puede cerrar todavía.
+      </div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-dark" type="submit" {% if not acciones.cerrar %}disabled{% endif %}>Confirmar cierre</button>
+      <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_detalle' periodo.pk %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

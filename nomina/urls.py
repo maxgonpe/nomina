@@ -15,6 +15,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("cuentas/", include("django.contrib.auth.urls")),
     path("rrhh/", include("rrhh.urls")),
+    path("remuneraciones/", include("remuneraciones.urls")),
     path(
         "",
         RedirectView.as_view(pattern_name="rrhh:trabajador_lista"),

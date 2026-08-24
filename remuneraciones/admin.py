@@ -16,8 +16,23 @@ from remuneraciones.models import (
 
 @admin.register(PeriodoRemuneracion)
 class PeriodoRemuneracionAdmin(admin.ModelAdmin):
-    list_display = ("anio", "mes", "estado")
+    list_display = (
+        "anio",
+        "mes",
+        "fecha_inicio",
+        "fecha_fin",
+        "estado",
+        "cerrado_en",
+        "cerrado_por",
+    )
     list_filter = ("anio", "estado")
+    search_fields = ("observaciones", "motivo_reapertura")
+    readonly_fields = (
+        "fecha_inicio",
+        "fecha_fin",
+        "cerrado_en",
+        "cerrado_por",
+    )
 
 
 @admin.register(ConceptoRemuneracion)

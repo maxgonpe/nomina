@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Reabrir {{ periodo.nombre }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Reabrir {{ periodo.nombre }}</h1>
+<p class="text-muted">
+  La reapertura deja el período en estado abierto y registra el motivo.
+  El último cierre (fecha y usuario) se conserva como auditoría.
+</p>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.motivo.id_for_label }}">{{ form.motivo.label }}</label>
+        {{ form.motivo }}
+        {% if form.motivo.help_text %}<div class="form-text">{{ form.motivo.help_text }}</div>{% endif %}
+        {% if form.motivo.errors %}<div class="text-danger small">{{ form.motivo.errors }}</div>{% endif %}
+      </div>
+      <button class="btn btn-warning" type="submit">Confirmar reapertura</button>
+      <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_detalle' periodo.pk %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

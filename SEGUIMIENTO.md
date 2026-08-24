@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **24 de agosto de 2026**, al terminar **REM002**.
+Punto de corte: **24 de agosto de 2026**, al terminar **REM003**.
 
-Al retomar: leer este archivo, luego el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001/REM002.
+Al retomar: leer este archivo, luego el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM003.
 
 ## Dónde estamos
 
@@ -10,9 +10,9 @@ Al retomar: leer este archivo, luego el skill `.cursor/skills/nomina-sistema/SKI
 |------|--------|
 | Infra Django (apps, settings, RUT, locale, media, migraciones, admin) | Hecho |
 | REM001 Maestro de trabajadores | Hecho |
-| REM002 Cargos, contratos y anexos | Hecho — **último cerrado** |
-| REM003 Períodos de remuneración | **Siguiente** |
-| REM004 Conceptos y parámetros | Pendiente |
+| REM002 Cargos, contratos y anexos | Hecho |
+| REM003 Períodos de remuneración | Hecho — **último cerrado** |
+| REM004 Conceptos y parámetros | **Siguiente** |
 | REM006 Horas extraordinarias | Pendiente |
 | REM007 Bonos, anticipos, préstamos y movimientos | Pendiente |
 | REM008 Finiquitos | Pendiente |
@@ -37,7 +37,7 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - Locale `es-cl`, zona `America/Santiago`, fechas `dd-mm-yyyy`
 - `core/validators.py`: RUT (normalizar, validar DV, formatear)
 - Admin de todas las apps
-- Migraciones aplicadas (`rrhh` hasta `0002`)
+- Migraciones aplicadas (`rrhh` hasta `0002`, `remuneraciones` hasta `0002`)
 
 ### REM001 — Trabajadores
 
@@ -56,6 +56,17 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - Archivos de anexo en `media/rrhh/anexos/<año>/<id_trabajador>/` con nombre sanitizado
 - Tests: `rrhh/test_contratos.py`
 
+### REM003 — Períodos de remuneración
+
+- Listado, alta y ficha: `/remuneraciones/periodos/`
+- Fechas de inicio/fin derivadas del mes (p. ej. 08/2026 → 01-08-2026 a 31-08-2026)
+- Estados: `BORRADOR → ABIERTO → CALCULADO → VALIDADO → CERRADO`
+- Cierre vía `remuneraciones/services/periodos.py` → `cerrar()` (transacción). No cierra si hay liquidaciones en borrador o sin recálculo
+- Período cerrado bloquea HE, movimientos, liquidaciones y finiquitos
+- Reapertura a ABIERTO con motivo obligatorio (auditoría: `motivo_reapertura`, se conserva el último cierre)
+- Una hoja Excel (SEPTIEMBRE, etc.) no abre el período; `nombre_hoja_excel` es solo la equivalencia
+- Tests: `remuneraciones/test_periodos.py`
+
 ## Cómo retomar
 
 ```bash
@@ -66,14 +77,14 @@ python manage.py runserver 127.0.0.1:8000
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
 - Usar el superusuario que ya creaste (hay además un `admin`/`admin` de prueba; conviene no depender de esa clave)
-- Tests: `python manage.py test rrhh core`
+- Tests: `python manage.py test rrhh core remuneraciones`
 
-Primera tarea al volver: **REM003 — Períodos de remuneración**.
+Primera tarea al volver: **REM004 — Conceptos y parámetros de remuneración**.
 
-1. Leer `otros/mini-especificaciones/` (REM003 / períodos).
-2. Reutilizar `remuneraciones.PeriodoRemuneracion` (el modelo ya está).
-3. Implementar estados, apertura/cierre, bloqueo al cerrado, tests.
-4. Actualizar la tabla de este archivo al cerrar REM003.
+1. Leer `otros/mini-especificaciones/` (REM004 / conceptos).
+2. Reutilizar `ConceptoRemuneracion`, `ParametroNegocio` y `ParametroValor`.
+3. Un haber o descuento nuevo no debe alterar columnas de `LiquidacionMensual`.
+4. Actualizar la tabla de este archivo al cerrar REM004.
 
 ## Qué no hacer al retomar
 

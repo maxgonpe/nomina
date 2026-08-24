@@ -5,10 +5,48 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q, Sum
+from django.urls import reverse
 
 from core.models import AuditModel
+
+
+NOMBRE_MES = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre",
+}
+
+HOJA_EXCEL_MES = {
+    1: "ENERO",
+    2: "FEBRERO",
+    3: "MARZO",
+    4: "ABRIL",
+    5: "MAYO",
+    6: "JUNIO",
+    7: "JULIO",
+    8: "AGOSTO",
+    9: "SEPTIEMBRE",
+    10: "OCTUBRE",
+    11: "NOVIEMBRE",
+    12: "DICIEMBRE",
+}
+
+
+def bloquear_si_periodo_cerrado(periodo):
+    if periodo is not None:
+        periodo.assert_editable()
 
 
 class PeriodoRemuneracion(AuditModel):
@@ -22,7 +60,12 @@ class PeriodoRemuneracion(AuditModel):
 
     anio = models.PositiveSmallIntegerField()
 
-    mes = models.PositiveSmallIntegerField()
+    mes = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(12),
+        ],
+    )
 
     fecha_inicio = models.DateField(
         editable=False,
@@ -64,6 +107,8 @@ class PeriodoRemuneracion(AuditModel):
             "-anio",
             "-mes",
         ]
+        verbose_name = "período de remuneración"
+        verbose_name_plural = "períodos de remuneración"
 
         constraints = [
             models.UniqueConstraint(
@@ -78,6 +123,27 @@ class PeriodoRemuneracion(AuditModel):
                 name="ck_periodo_remuneracion_mes",
             ),
         ]
+
+    @property
+    def nombre(self):
+        mes = NOMBRE_MES.get(self.mes, str(self.mes))
+        return f"{mes} {self.anio}"
+
+    @property
+    def nombre_hoja_excel(self):
+        return HOJA_EXCEL_MES.get(self.mes, "")
+
+    @property
+    def esta_cerrado(self):
+        return self.estado == self.Estado.CERRADO
+
+    def assert_editable(self):
+        if self.esta_cerrado:
+            raise ValidationError(
+                "El período está cerrado. No se pueden modificar horas extra, "
+                "movimientos, liquidaciones ni finiquitos, salvo reapertura "
+                "autorizada."
+            )
 
     def save(self, *args, **kwargs):
         ultimo_dia = calendar.monthrange(
@@ -101,6 +167,9 @@ class PeriodoRemuneracion(AuditModel):
 
     def __str__(self):
         return f"{self.mes:02d}-{self.anio}"
+
+    def get_absolute_url(self):
+        return reverse("remuneraciones:periodo_detalle", args=[self.pk])
 
 
 class ConceptoRemuneracion(AuditModel):
@@ -365,6 +434,16 @@ class LiquidacionMensual(AuditModel):
             f"{self.periodo}"
         )
 
+    def clean(self):
+        super().clean()
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+
+    def save(self, *args, **kwargs):
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+        super().save(*args, **kwargs)
+
 
 class MovimientoRemuneracion(AuditModel):
 
@@ -445,6 +524,16 @@ class MovimientoRemuneracion(AuditModel):
             f"{self.monto}"
         )
 
+    def clean(self):
+        super().clean()
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+
+    def save(self, *args, **kwargs):
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+        super().save(*args, **kwargs)
+
 
 class HoraExtra(AuditModel):
 
@@ -505,6 +594,8 @@ class HoraExtra(AuditModel):
 
     def clean(self):
         super().clean()
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
 
         if (
             self.periodo_id
@@ -519,6 +610,11 @@ class HoraExtra(AuditModel):
                 "La fecha de la hora extra no pertenece "
                 "al período seleccionado."
             )
+
+    def save(self, *args, **kwargs):
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return (
@@ -661,6 +757,16 @@ class Finiquito(AuditModel):
             f"{self.trabajador} - "
             f"{self.fecha}"
         )
+
+    def clean(self):
+        super().clean()
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+
+    def save(self, *args, **kwargs):
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+        super().save(*args, **kwargs)
 
 
 class ConceptoCostoTrabajador(AuditModel):

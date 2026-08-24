@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ periodo.nombre }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ periodo.nombre }}</h1>
+    <p class="text-muted mb-0">{{ periodo.fecha_inicio|date:"d-m-Y" }} → {{ periodo.fecha_fin|date:"d-m-Y" }}</p>
+  </div>
+  <div class="btn-group">
+    {% if acciones.editar and perms.remuneraciones.change_periodoremuneracion %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_editar' periodo.pk %}">Editar</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_lista' %}">Volver</a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Estado</dt>
+      <dd class="col-sm-9">{{ periodo.get_estado_display }}</dd>
+      <dt class="col-sm-3">Hoja Excel equivalente</dt>
+      <dd class="col-sm-9">
+        <code>{{ periodo.nombre_hoja_excel }}</code>
+        <span class="text-muted">— la hoja no abre ni cierra este período</span>
+      </dd>
+      <dt class="col-sm-3">Cerrado el</dt>
+      <dd class="col-sm-9">
+        {% if periodo.cerrado_en %}
+          {{ periodo.cerrado_en|date:"d-m-Y H:i" }}
+          {% if periodo.cerrado_por %}por {{ periodo.cerrado_por }}{% endif %}
+        {% else %}
+          —
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Motivo de reapertura</dt>
+      <dd class="col-sm-9">{{ periodo.motivo_reapertura|default:"—" }}</dd>
+      <dt class="col-sm-3">Observaciones</dt>
+      <dd class="col-sm-9">{{ periodo.observaciones|default:"—" }}</dd>
+    </dl>
+  </div>
+</div>
+
+{% if perms.remuneraciones.change_periodoremuneracion %}
+<div class="mb-4">
+  {% if acciones.abrir %}
+    <form method="post" action="{% url 'remuneraciones:periodo_abrir' periodo.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">Abrir período</button>
+    </form>
+  {% endif %}
+  {% if acciones.marcar_calculado %}
+    <form method="post" action="{% url 'remuneraciones:periodo_calcular' periodo.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-primary" type="submit">Marcar calculado</button>
+    </form>
+  {% endif %}
+  {% if acciones.validar %}
+    <form method="post" action="{% url 'remuneraciones:periodo_validar' periodo.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-primary" type="submit">Validar</button>
+    </form>
+  {% endif %}
+  {% if acciones.cerrar %}
+    <a class="btn btn-dark" href="{% url 'remuneraciones:periodo_cerrar' periodo.pk %}">Cerrar período</a>
+  {% endif %}
+  {% if acciones.reabrir %}
+    <a class="btn btn-warning" href="{% url 'remuneraciones:periodo_reabrir' periodo.pk %}">Reabrir con motivo</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<h2 class="h5">Liquidaciones de este período</h2>
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Trabajador</th>
+          <th>Estado</th>
+          <th>Requiere recálculo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for liquidacion in liquidaciones %}
+          <tr>
+            <td>{{ liquidacion.trabajador }}</td>
+            <td>{{ liquidacion.get_estado_display }}</td>
+            <td>{% if liquidacion.requiere_recalculo %}Sí{% else %}No{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="text-muted">Aún no hay liquidaciones (REM005).</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

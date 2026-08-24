@@ -77,4 +77,4 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 La bitácora viva está en [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md) (raíz del repo). Leerla al retomar.
 
-Corte actual: REM002 cerrado. Siguiente: REM003 (períodos).
+Corte actual: REM003 cerrado. Siguiente: REM004 (conceptos y parámetros).
