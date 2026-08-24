@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Nómina
 
-Al trabajar en este repo, seguir el skill `nomina-sistema`.
+Al trabajar en este repo, seguir el skill `nomina-sistema` y leer `SEGUIMIENTO.md` para saber el punto exacto del desarrollo.
 
 - Django es la fuente oficial; Excel solo importa/exporta.
 - No crear modelos por mes o año. Usar período + fecha.

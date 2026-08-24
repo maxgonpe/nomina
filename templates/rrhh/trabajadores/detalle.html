@@ -16,7 +16,7 @@
   </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
   <div class="card-body">
     <dl class="row mb-0">
       <dt class="col-sm-3">RUT</dt>
@@ -34,6 +34,80 @@
     </dl>
   </div>
 </div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Condición vigente</span>
+    <form class="d-flex gap-2 mb-0" method="get">
+      <input class="form-control form-control-sm" type="date" name="fecha" value="{{ fecha_consulta|date:'Y-m-d' }}">
+      <button class="btn btn-sm btn-outline-secondary" type="submit">Consultar</button>
+    </form>
+  </div>
+  <div class="card-body">
+    {% if condicion %}
+      <dl class="row mb-0">
+        <dt class="col-sm-3">A la fecha</dt>
+        <dd class="col-sm-9">{{ fecha_consulta|date:"d-m-Y" }}</dd>
+        <dt class="col-sm-3">Contrato</dt>
+        <dd class="col-sm-9">
+          <a href="{% url 'rrhh:contrato_detalle' condicion.contrato.pk %}">
+            desde {{ condicion.contrato.fecha_inicio|date:"d-m-Y" }}
+          </a>
+        </dd>
+        <dt class="col-sm-3">Cargo</dt>
+        <dd class="col-sm-9">{{ condicion.cargo }}</dd>
+        <dt class="col-sm-3">Centro de costo</dt>
+        <dd class="col-sm-9">{{ condicion.centro_costo|default:"—" }}</dd>
+        <dt class="col-sm-3">Sueldo contractual</dt>
+        <dd class="col-sm-9">{{ condicion.sueldo_base }}</dd>
+      </dl>
+    {% else %}
+      <p class="text-muted mb-0">No hay contrato vigente al {{ fecha_consulta|date:"d-m-Y" }}.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h5 mb-0">Contratos y anexos</h2>
+  {% if perms.rrhh.add_contrato %}
+    <a class="btn btn-sm btn-primary" href="{% url 'rrhh:trabajador_contrato_crear' trabajador.pk %}">Nuevo contrato</a>
+  {% endif %}
+</div>
+
+{% for contrato in contratos %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between">
+        <div>
+          <a href="{% url 'rrhh:contrato_detalle' contrato.pk %}">
+            {{ contrato.get_tipo_contrato_display }} — {{ contrato.cargo }}
+          </a>
+          <div class="text-muted small">
+            {{ contrato.fecha_inicio|date:"d-m-Y" }}
+            → {{ contrato.fecha_termino|date:"d-m-Y"|default:"sin término" }}
+            · {{ contrato.get_estado_display }}
+            · sueldo inicial {{ contrato.sueldo_base_inicial }}
+          </div>
+        </div>
+      </div>
+      {% if contrato.anexos.all %}
+        <ul class="mt-2 mb-0 small">
+          {% for anexo in contrato.anexos.all %}
+            <li>
+              {{ anexo.fecha_vigencia|date:"d-m-Y" }} —
+              {{ anexo.get_tipo_display }}
+              {% if anexo.nuevo_sueldo_base %}· sueldo {{ anexo.nuevo_sueldo_base }}{% endif %}
+              {% if anexo.nuevo_cargo %}· cargo {{ anexo.nuevo_cargo }}{% endif %}
+              {% if anexo.nuevo_centro_costo %}· CC {{ anexo.nuevo_centro_costo }}{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </div>
+{% empty %}
+  <p class="text-muted">Aún no hay contratos registrados.</p>
+{% endfor %}
 
 <p class="mt-3"><a href="{% url 'rrhh:trabajador_lista' %}">← Volver al listado</a></p>
 {% endblock %}

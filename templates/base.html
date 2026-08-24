@@ -13,6 +13,8 @@
       <div class="navbar-nav me-auto">
         {% if user.is_authenticated %}
           <a class="nav-link" href="{% url 'rrhh:trabajador_lista' %}">Trabajadores</a>
+          <a class="nav-link" href="{% url 'rrhh:cargo_lista' %}">Cargos</a>
+          <a class="nav-link" href="{% url 'rrhh:contrato_lista' %}">Contratos</a>
           {% if user.is_staff %}
             <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
           {% endif %}

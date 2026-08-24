@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar contrato{% else %}Nuevo contrato{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">
+  {% if form.instance.pk %}Editar contrato{% else %}Nuevo contrato{% endif %}
+  {% if trabajador %}<small class="text-muted">— {{ trabajador.nombre_completo }}</small>{% endif %}
+</h1>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if form.trabajador.is_hidden %}
+        {{ form.trabajador }}
+      {% else %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.trabajador.id_for_label }}">Trabajador</label>
+          {{ form.trabajador }}
+          {% if form.trabajador.errors %}<div class="text-danger small">{{ form.trabajador.errors }}</div>{% endif %}
+        </div>
+      {% endif %}
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="{{ form.cargo.id_for_label }}">Cargo</label>
+          {{ form.cargo }}
+          {% if form.cargo.errors %}<div class="text-danger small">{{ form.cargo.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="{{ form.centro_costo.id_for_label }}">Centro de costo</label>
+          {{ form.centro_costo }}
+          {% if form.centro_costo.errors %}<div class="text-danger small">{{ form.centro_costo.errors }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="{{ form.tipo_contrato.id_for_label }}">Tipo</label>
+          {{ form.tipo_contrato }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="{{ form.estado.id_for_label }}">Estado</label>
+          {{ form.estado }}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.fecha_inicio.id_for_label }}">Fecha inicio</label>
+          {{ form.fecha_inicio }}
+          {% if form.fecha_inicio.errors %}<div class="text-danger small">{{ form.fecha_inicio.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.fecha_termino.id_for_label }}">Fecha término</label>
+          {{ form.fecha_termino }}
+          {% if form.fecha_termino.errors %}<div class="text-danger small">{{ form.fecha_termino.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.sueldo_base_inicial.id_for_label }}">Sueldo base inicial</label>
+          {{ form.sueldo_base_inicial }}
+          {% if form.sueldo_base_inicial.errors %}<div class="text-danger small">{{ form.sueldo_base_inicial.errors }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+        {{ form.observaciones }}
+      </div>
+      <button class="btn btn-primary" type="submit">Guardar</button>
+      {% if form.instance.pk %}
+        <a class="btn btn-outline-secondary" href="{% url 'rrhh:contrato_detalle' form.instance.pk %}">Cancelar</a>
+      {% elif trabajador %}
+        <a class="btn btn-outline-secondary" href="{% url 'rrhh:trabajador_detalle' trabajador.pk %}">Cancelar</a>
+      {% else %}
+        <a class="btn btn-outline-secondary" href="{% url 'rrhh:contrato_lista' %}">Cancelar</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

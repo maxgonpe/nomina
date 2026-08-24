@@ -75,6 +75,6 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 ## Estado
 
-- Infra lista: apps en `INSTALLED_APPS`, `core/validators.py` (RUT), locale `es-cl` / `America/Santiago`, media, migraciones, admin de todas las apps.
-- REM001 listo: CRUD de trabajadores, RUT único/válido, desactivación sin borrar, tests en `core` y `rrhh`.
-- Siguiente: REM002 (cargos, contratos, anexos y sueldo/cargo/CC vigentes a una fecha).
+La bitácora viva está en [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md) (raíz del repo). Leerla al retomar.
+
+Corte actual: REM002 cerrado. Siguiente: REM003 (períodos).
