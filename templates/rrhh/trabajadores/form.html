@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar trabajador{% else %}Nuevo trabajador{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if form.instance.pk %}Editar trabajador{% else %}Nuevo trabajador{% endif %}</h1>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.rut.id_for_label }}">RUT</label>
+        {{ form.rut }}
+        {% if form.rut.errors %}<div class="text-danger small">{{ form.rut.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.nombre_completo.id_for_label }}">Nombre completo</label>
+        {{ form.nombre_completo }}
+        {% if form.nombre_completo.errors %}<div class="text-danger small">{{ form.nombre_completo.errors }}</div>{% endif %}
+      </div>
+      <div class="form-check mb-3">
+        {{ form.activo }}
+        <label class="form-check-label" for="{{ form.activo.id_for_label }}">Activo</label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+        {{ form.observaciones }}
+      </div>
+      <button class="btn btn-primary" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% if form.instance.pk %}{% url 'rrhh:trabajador_detalle' form.instance.pk %}{% else %}{% url 'rrhh:trabajador_lista' %}{% endif %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

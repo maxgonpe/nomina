@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Desactivar trabajador{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h1 class="h4">Desactivar a {{ trabajador.nombre_completo }}</h1>
+    <p>El trabajador quedará inactivo. Contratos, liquidaciones e historial se conservan.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Confirmar desactivación</button>
+      <a class="btn btn-outline-secondary" href="{% url 'rrhh:trabajador_detalle' trabajador.pk %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

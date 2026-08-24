@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Trabajadores{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Trabajadores</h1>
+  {% if perms.rrhh.add_trabajador %}
+    <a class="btn btn-primary" href="{% url 'rrhh:trabajador_crear' %}">Nuevo trabajador</a>
+  {% endif %}
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-6">
+    <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre o RUT">
+  </div>
+  <div class="col-md-4 d-flex align-items-center">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="incluir_inactivos" value="1" id="inactivos"
+             {% if incluir_inactivos %}checked{% endif %}>
+      <label class="form-check-label" for="inactivos">Incluir inactivos</label>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Nombre</th>
+          <th>RUT</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trabajadores %}
+          <tr>
+            <td><a href="{% url 'rrhh:trabajador_detalle' t.pk %}">{{ t.nombre_completo }}</a></td>
+            <td>{{ t.rut_formateado }}</td>
+            <td>
+              {% if t.activo %}
+                <span class="badge text-bg-success">Activo</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Inactivo</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3" class="text-muted">No hay trabajadores para mostrar.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+  <nav class="mt-3">
+    <ul class="pagination">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}{% if incluir_inactivos %}&incluir_inactivos=1{% endif %}">Anterior</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}{% if incluir_inactivos %}&incluir_inactivos=1{% endif %}">Siguiente</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endif %}
+{% endblock %}
