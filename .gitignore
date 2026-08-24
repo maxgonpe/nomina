@@ -111,6 +111,7 @@ nomina/local_settings.py
 /static/
 /staticfiles/
 /static_root/
+/otros/
 
 # ==============================
 # ARCHIVOS DE ENTORNO Y SECRETOS
