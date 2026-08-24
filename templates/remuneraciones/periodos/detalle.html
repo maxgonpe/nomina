@@ -10,6 +10,9 @@
     {% if acciones.editar and perms.remuneraciones.change_periodoremuneracion %}
       <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_editar' periodo.pk %}">Editar</a>
     {% endif %}
+    {% if perms.remuneraciones.view_horaextra %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_horas_extra' periodo.pk %}">Horas extra</a>
+    {% endif %}
     <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_lista' %}">Volver</a>
   </div>
 </div>

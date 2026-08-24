@@ -448,6 +448,17 @@ class LiquidacionMensual(AuditModel):
         super().save(*args, **kwargs)
 
 
+def marcar_liquidacion_pendiente_recalculo(trabajador_id, periodo_id):
+    if not trabajador_id or not periodo_id:
+        return
+    LiquidacionMensual.objects.filter(
+        trabajador_id=trabajador_id,
+        periodo_id=periodo_id,
+    ).exclude(
+        estado=LiquidacionMensual.Estado.ANULADA
+    ).update(requiere_recalculo=True)
+
+
 class MovimientoRemuneracion(AuditModel):
 
     class Origen(models.TextChoices):
@@ -600,6 +611,11 @@ class HoraExtra(AuditModel):
         if self.periodo_id:
             bloquear_si_periodo_cerrado(self.periodo)
 
+        if self.horas is not None and self.horas <= 0:
+            raise ValidationError(
+                {"horas": "Las horas extra deben ser mayores que 0."}
+            )
+
         if (
             self.periodo_id
             and self.fecha
@@ -618,6 +634,21 @@ class HoraExtra(AuditModel):
         if self.periodo_id:
             bloquear_si_periodo_cerrado(self.periodo)
         super().save(*args, **kwargs)
+        marcar_liquidacion_pendiente_recalculo(
+            self.trabajador_id,
+            self.periodo_id,
+        )
+
+    def delete(self, *args, **kwargs):
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+        trabajador_id = self.trabajador_id
+        periodo_id = self.periodo_id
+        super().delete(*args, **kwargs)
+        marcar_liquidacion_pendiente_recalculo(
+            trabajador_id,
+            periodo_id,
+        )
 
     def __str__(self):
         return (
@@ -625,6 +656,9 @@ class HoraExtra(AuditModel):
             f"{self.fecha} - "
             f"{self.horas} hrs"
         )
+
+    def get_absolute_url(self):
+        return reverse("remuneraciones:hora_extra_editar", args=[self.pk])
 
 
 class PagoRemuneracion(AuditModel):

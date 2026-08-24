@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Borrar hora extra{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h1 class="h4">Borrar hora extra</h1>
+    <p>
+      {{ horaextra.trabajador.nombre_completo }} ·
+      {{ horaextra.fecha|date:"d-m-Y" }} ·
+      {{ horaextra.horas }} h
+      {% if horaextra.actividad %}· {{ horaextra.actividad }}{% endif %}
+    </p>
+    <p class="text-muted">Si hay liquidación del período, quedará pendiente de recálculo.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Confirmar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_horas_extra' horaextra.periodo_id %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

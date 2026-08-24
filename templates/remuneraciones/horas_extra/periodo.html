@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Horas extra {{ periodo.nombre }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Horas extra — {{ periodo.nombre }}</h1>
+    <p class="text-muted mb-0">{{ periodo.fecha_inicio|date:"d-m-Y" }} → {{ periodo.fecha_fin|date:"d-m-Y" }} · {{ periodo.get_estado_display }}</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_detalle' periodo.pk %}">Volver al período</a>
+</div>
+
+{% if totales %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Suma por trabajador (insumo de la liquidación)</div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr><th>Trabajador</th><th>Total horas</th></tr>
+      </thead>
+      <tbody>
+        {% for fila in totales %}
+          <tr>
+            <td>{{ fila.trabajador__nombre_completo }}</td>
+            <td>{{ fila.total }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if puede_cargar %}
+<h2 class="h5">Carga rápida</h2>
+<p class="text-muted">Puede registrar varias filas sin salir de esta pantalla. Las filas vacías se ignoran.</p>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Trabajador</th>
+              <th>Fecha</th>
+              <th>Horas</th>
+              <th>Actividad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset %}
+              <tr>
+                <td>
+                  {{ form.trabajador }}
+                  {% if form.trabajador.errors %}<div class="text-danger small">{{ form.trabajador.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.fecha }}
+                  {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.horas }}
+                  {% if form.horas.errors %}<div class="text-danger small">{{ form.horas.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.actividad }}
+                  {% if form.non_field_errors %}<div class="text-danger small">{{ form.non_field_errors }}</div>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" type="submit">Registrar filas</button>
+    </form>
+  </div>
+</div>
+{% elif periodo.esta_cerrado %}
+  <div class="alert alert-warning">El período está cerrado: no se pueden crear, editar ni borrar horas extra.</div>
+{% endif %}
+
+<h2 class="h5">Registros</h2>
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Fecha</th>
+          <th>Trabajador</th>
+          <th>Horas</th>
+          <th>Actividad</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in horas_extra %}
+          <tr>
+            <td>{{ item.fecha|date:"d-m-Y" }}</td>
+            <td>{{ item.trabajador.nombre_completo }}</td>
+            <td>{{ item.horas }}</td>
+            <td>{{ item.actividad|default:"—" }}</td>
+            <td>
+              {% if not periodo.esta_cerrado %}
+                {% if perms.remuneraciones.change_horaextra %}
+                  <a href="{% url 'remuneraciones:hora_extra_editar' item.pk %}">Editar</a>
+                {% endif %}
+                {% if perms.remuneraciones.delete_horaextra %}
+                  <a class="text-danger ms-2" href="{% url 'remuneraciones:hora_extra_borrar' item.pk %}">Borrar</a>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-muted">Aún no hay horas extra en este período.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

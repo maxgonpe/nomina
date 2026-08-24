@@ -65,4 +65,39 @@ urlpatterns = [
         views.ConceptoUpdateView.as_view(),
         name="concepto_editar",
     ),
+    path(
+        "horas-extra/",
+        views.HoraExtraListView.as_view(),
+        name="hora_extra_lista",
+    ),
+    path(
+        "horas-extra/nuevo/",
+        views.HoraExtraCreateView.as_view(),
+        name="hora_extra_crear",
+    ),
+    path(
+        "horas-extra/<int:pk>/editar/",
+        views.HoraExtraUpdateView.as_view(),
+        name="hora_extra_editar",
+    ),
+    path(
+        "horas-extra/<int:pk>/borrar/",
+        views.HoraExtraDeleteView.as_view(),
+        name="hora_extra_borrar",
+    ),
+    path(
+        "periodos/<int:periodo_id>/horas-extra/",
+        views.PeriodoHorasExtraView.as_view(),
+        name="periodo_horas_extra",
+    ),
+    path(
+        "trabajadores/<int:trabajador_id>/horas-extra/",
+        views.HoraExtraListView.as_view(),
+        name="trabajador_horas_extra",
+    ),
+    path(
+        "trabajadores/<int:trabajador_id>/horas-extra/nuevo/",
+        views.HoraExtraCreateView.as_view(),
+        name="trabajador_hora_extra_crear",
+    ),
 ]
