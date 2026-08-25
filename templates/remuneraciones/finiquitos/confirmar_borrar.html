@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Borrar finiquito{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h1 class="h4">Borrar finiquito en borrador</h1>
+    <p>
+      {{ finiquito.trabajador.nombre_completo }} ·
+      {{ finiquito.fecha|date:"d-m-Y" }} ·
+      {{ finiquito.monto }}
+    </p>
+    <p class="text-muted">Los finiquitos validados no se borran: se anulan para conservar la trazabilidad.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Confirmar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:finiquito_detalle' finiquito.pk %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

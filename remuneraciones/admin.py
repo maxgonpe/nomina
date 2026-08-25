@@ -95,8 +95,19 @@ class PagoRemuneracionAdmin(admin.ModelAdmin):
 
 @admin.register(Finiquito)
 class FiniquitoAdmin(admin.ModelAdmin):
-    list_display = ("trabajador", "fecha", "monto", "estado")
-    list_filter = ("estado",)
+    list_display = (
+        "trabajador",
+        "periodo",
+        "fecha",
+        "monto",
+        "estado",
+    )
+    list_filter = ("estado", "periodo", "motivo")
+    search_fields = (
+        "trabajador__nombre_completo",
+        "trabajador__rut",
+        "observaciones",
+    )
 
 
 @admin.register(ConceptoCostoTrabajador)

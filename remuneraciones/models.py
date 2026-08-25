@@ -9,6 +9,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q, Sum
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.text import get_valid_filename
 
 from core.models import AuditModel
 
@@ -770,6 +772,15 @@ class PagoRemuneracion(AuditModel):
         )
 
 
+def finiquito_upload_to(instance, filename):
+    nombre = get_valid_filename(filename)
+    anio = timezone.now().year
+    if instance.fecha:
+        anio = instance.fecha.year
+    trabajador_id = instance.trabajador_id or "sinterm"
+    return f"remuneraciones/finiquitos/{anio}/{trabajador_id}/{nombre}"
+
+
 class Finiquito(AuditModel):
 
     class Estado(models.TextChoices):
@@ -777,6 +788,18 @@ class Finiquito(AuditModel):
         VALIDADO = "VALIDADO", "Validado"
         PAGADO = "PAGADO", "Pagado"
         ANULADO = "ANULADO", "Anulado"
+
+    class Motivo(models.TextChoices):
+        MUTUO_ACUERDO = "MUTUO_ACUERDO", "Mutuo acuerdo"
+        RENUNCIA = "RENUNCIA", "Renuncia"
+        DESAHUCIO = "DESAHUCIO", "Desahucio"
+        NECESIDADES_EMPRESA = (
+            "NECESIDADES_EMPRESA",
+            "Necesidades de la empresa",
+        )
+        TERMINO_PLAZO = "TERMINO_PLAZO", "Término de plazo"
+        TERMINO_OBRA = "TERMINO_OBRA", "Término de obra o faena"
+        OTRO = "OTRO", "Otro"
 
     trabajador = models.ForeignKey(
         "rrhh.Trabajador",
@@ -807,7 +830,9 @@ class Finiquito(AuditModel):
     fecha = models.DateField()
 
     motivo = models.CharField(
-        max_length=200,
+        max_length=30,
+        choices=Motivo.choices,
+        default=Motivo.OTRO,
         blank=True,
     )
 
@@ -827,7 +852,7 @@ class Finiquito(AuditModel):
     )
 
     archivo = models.FileField(
-        upload_to="remuneraciones/finiquitos/%Y/%m/",
+        upload_to=finiquito_upload_to,
         null=True,
         blank=True,
     )
@@ -842,21 +867,84 @@ class Finiquito(AuditModel):
             ),
         ]
 
+    @property
+    def esta_anulado(self):
+        return self.estado == self.Estado.ANULADO
+
+    @property
+    def alimenta_liquidacion(self):
+        return self.estado in (
+            self.Estado.VALIDADO,
+            self.Estado.PAGADO,
+        )
+
     def __str__(self):
         return (
             f"{self.trabajador} - "
             f"{self.fecha}"
         )
 
+    def get_absolute_url(self):
+        return reverse("remuneraciones:finiquito_detalle", args=[self.pk])
+
     def clean(self):
         super().clean()
         if self.periodo_id:
             bloquear_si_periodo_cerrado(self.periodo)
+        if self.monto is not None and self.monto <= 0:
+            raise ValidationError(
+                {"monto": "El monto del finiquito debe ser mayor que 0."}
+            )
+        if (
+            self.periodo_id
+            and self.fecha
+            and not (
+                self.periodo.fecha_inicio
+                <= self.fecha
+                <= self.periodo.fecha_fin
+            )
+        ):
+            raise ValidationError(
+                {
+                    "fecha": (
+                        "La fecha del finiquito no pertenece "
+                        "al período seleccionado."
+                    )
+                }
+            )
+        if (
+            self.trabajador_id
+            and self.contrato_id
+            and self.contrato.trabajador_id != self.trabajador_id
+        ):
+            raise ValidationError(
+                {"contrato": "El contrato no corresponde a este trabajador."}
+            )
+        if self.contrato_id and self.fecha:
+            if self.fecha < self.contrato.fecha_inicio:
+                raise ValidationError(
+                    {
+                        "fecha": (
+                            "La fecha del finiquito no puede ser anterior "
+                            "al inicio del contrato."
+                        )
+                    }
+                )
 
     def save(self, *args, **kwargs):
         if self.periodo_id:
             bloquear_si_periodo_cerrado(self.periodo)
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.periodo_id:
+            bloquear_si_periodo_cerrado(self.periodo)
+        if self.estado != self.Estado.BORRADOR:
+            raise ValidationError(
+                "Solo se puede borrar un finiquito en borrador. "
+                "Los validados se anulan para conservar la trazabilidad."
+            )
+        super().delete(*args, **kwargs)
 
 
 class ConceptoCostoTrabajador(AuditModel):

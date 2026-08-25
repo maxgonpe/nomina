@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar finiquito{% else %}Nuevo finiquito{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if form.instance.pk %}Editar finiquito{% else %}Nuevo finiquito{% endif %}</h1>
+<p class="text-muted">
+  Registrar el evento no cierra el contrato ni liquida el monto: eso ocurre al validar
+  (concepto FINIQUITO) y, si corresponde, con la acción explícita de cerrar contrato.
+</p>
+{% if trabajador %}<p class="fw-semibold mb-2">{{ trabajador.nombre_completo }}</p>{% endif %}
+{% if periodo %}<p class="text-muted">{{ periodo.nombre }}</p>{% endif %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if form.trabajador %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.trabajador.id_for_label }}">Trabajador</label>
+        {{ form.trabajador }}
+        {% if form.trabajador.errors %}<div class="text-danger small">{{ form.trabajador.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if form.contrato %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.contrato.id_for_label }}">Contrato</label>
+        {{ form.contrato }}
+        {% if form.contrato.errors %}<div class="text-danger small">{{ form.contrato.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if form.periodo %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.periodo.id_for_label }}">Período</label>
+        {{ form.periodo }}
+        {% if form.periodo.errors %}<div class="text-danger small">{{ form.periodo.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if form.fecha %}
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.fecha.id_for_label }}">Fecha</label>
+          {{ form.fecha }}
+          {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors }}</div>{% endif %}
+        </div>
+        {% if form.motivo %}
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.motivo.id_for_label }}">Motivo</label>
+          {{ form.motivo }}
+          {% if form.motivo.errors %}<div class="text-danger small">{{ form.motivo.errors }}</div>{% endif %}
+        </div>
+        {% endif %}
+        {% if form.monto %}
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.monto.id_for_label }}">Monto</label>
+          {{ form.monto }}
+          {% if form.monto.help_text %}<div class="form-text">{{ form.monto.help_text }}</div>{% endif %}
+          {% if form.monto.errors %}<div class="text-danger small">{{ form.monto.errors }}</div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if form.observaciones %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+        {{ form.observaciones }}
+        {% if form.observaciones.errors %}<div class="text-danger small">{{ form.observaciones.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if form.archivo %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.archivo.id_for_label }}">Documento (PDF o respaldo firmado)</label>
+        {{ form.archivo }}
+        {% if form.archivo.errors %}<div class="text-danger small">{{ form.archivo.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      <button class="btn btn-primary" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% if form.instance.pk %}{% url 'remuneraciones:finiquito_detalle' form.instance.pk %}{% else %}{% url 'remuneraciones:finiquito_lista' %}{% endif %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

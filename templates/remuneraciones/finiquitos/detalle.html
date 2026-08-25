@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Finiquito {{ finiquito.trabajador.nombre_completo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Finiquito — {{ finiquito.trabajador.nombre_completo }}</h1>
+    <p class="text-muted mb-0">{{ finiquito.fecha|date:"d-m-Y" }} · {{ finiquito.periodo.nombre }} · {{ finiquito.get_estado_display }}</p>
+  </div>
+  <div class="btn-group">
+    {% if acciones.editar and perms.remuneraciones.change_finiquito %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:finiquito_editar' finiquito.pk %}">Editar</a>
+    {% endif %}
+    {% if acciones.borrar and perms.remuneraciones.delete_finiquito %}
+      <a class="btn btn-outline-danger" href="{% url 'remuneraciones:finiquito_borrar' finiquito.pk %}">Borrar</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:finiquito_lista' %}">Volver</a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Trabajador</dt>
+      <dd class="col-sm-9">
+        <a href="{% url 'rrhh:trabajador_detalle' finiquito.trabajador_id %}">{{ finiquito.trabajador.nombre_completo }}</a>
+      </dd>
+      <dt class="col-sm-3">Contrato</dt>
+      <dd class="col-sm-9">
+        <a href="{% url 'rrhh:contrato_detalle' finiquito.contrato_id %}">{{ finiquito.contrato }}</a>
+        · {{ finiquito.contrato.get_estado_display }}
+        {% if finiquito.contrato.fecha_termino %}
+          · término {{ finiquito.contrato.fecha_termino|date:"d-m-Y" }}
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Período</dt>
+      <dd class="col-sm-9">{{ finiquito.periodo.nombre }}</dd>
+      <dt class="col-sm-3">Fecha</dt>
+      <dd class="col-sm-9">{{ finiquito.fecha|date:"d-m-Y" }}</dd>
+      <dt class="col-sm-3">Motivo</dt>
+      <dd class="col-sm-9">{{ finiquito.get_motivo_display|default:"—" }}</dd>
+      <dt class="col-sm-3">Monto</dt>
+      <dd class="col-sm-9">{{ finiquito.monto }}</dd>
+      <dt class="col-sm-3">Documento</dt>
+      <dd class="col-sm-9">
+        {% if finiquito.archivo %}
+          <a href="{{ finiquito.archivo.url }}">{{ finiquito.archivo.name }}</a>
+        {% else %}
+          —
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Observaciones</dt>
+      <dd class="col-sm-9">{{ finiquito.observaciones|default:"—" }}</dd>
+      <dt class="col-sm-3">Movimiento en liquidación</dt>
+      <dd class="col-sm-9">
+        {% if movimiento %}
+          {{ movimiento.concepto.codigo }} · {{ movimiento.monto }} · {{ movimiento.get_origen_display }}
+          {% if movimiento.bloqueado %}<span class="badge text-bg-secondary">bloqueado</span>{% endif %}
+        {% else %}
+          Aún no alimenta la liquidación (se genera al validar).
+        {% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+
+{% if perms.remuneraciones.change_finiquito %}
+<div class="mb-4">
+  {% if acciones.validar %}
+    <form method="post" action="{% url 'remuneraciones:finiquito_validar' finiquito.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">Validar y reflejar en liquidación</button>
+    </form>
+  {% endif %}
+  {% if acciones.pagar %}
+    <form method="post" action="{% url 'remuneraciones:finiquito_pagar' finiquito.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-primary" type="submit">Marcar pagado</button>
+    </form>
+  {% endif %}
+  {% if acciones.terminar_contrato %}
+    <form method="post" action="{% url 'remuneraciones:finiquito_terminar_contrato' finiquito.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-dark" type="submit">Cerrar contrato en esta fecha</button>
+    </form>
+  {% endif %}
+  {% if acciones.anular %}
+    <form method="post" action="{% url 'remuneraciones:finiquito_anular' finiquito.pk %}" class="d-inline" onsubmit="return confirm('¿Anular este finiquito? Se quitará de la liquidación y se conserva el registro.');">
+      {% csrf_token %}
+      <button class="btn btn-outline-danger" type="submit">Anular</button>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<p class="text-muted small">
+  Cerrar el contrato es una acción aparte: validar el finiquito no cambia la fecha de término por sí solo.
+</p>
+{% endblock %}

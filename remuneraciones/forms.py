@@ -6,15 +6,17 @@ from django.utils import timezone
 from remuneraciones.models import (
     NOMBRE_MES,
     ConceptoRemuneracion,
+    Finiquito,
     HoraExtra,
     MovimientoRemuneracion,
     PeriodoRemuneracion,
 )
+from remuneraciones.services.finiquitos import registrar as registrar_finiquito
 from remuneraciones.services.movimientos import (
     conceptos_carga_manual,
     registrar_movimiento,
 )
-from rrhh.models import Trabajador
+from rrhh.models import Contrato, Trabajador
 
 MES_CHOICES = [(numero, nombre) for numero, nombre in NOMBRE_MES.items()]
 
@@ -429,3 +431,131 @@ MovimientoCargaRapidaFormSet = forms.modelformset_factory(
     extra=3,
     can_delete=False,
 )
+
+
+class FiniquitoForm(forms.ModelForm):
+    class Meta:
+        model = Finiquito
+        fields = [
+            "trabajador",
+            "contrato",
+            "periodo",
+            "fecha",
+            "motivo",
+            "monto",
+            "observaciones",
+            "archivo",
+        ]
+        widgets = {
+            "trabajador": forms.Select(attrs={"class": "form-select"}),
+            "contrato": forms.Select(attrs={"class": "form-select"}),
+            "periodo": forms.Select(attrs={"class": "form-select"}),
+            "fecha": forms.DateInput(
+                attrs={"class": "form-control", "type": "date"},
+                format="%Y-%m-%d",
+            ),
+            "motivo": forms.Select(attrs={"class": "form-select"}),
+            "monto": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0.01",
+                    "step": "0.01",
+                }
+            ),
+            "observaciones": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3}
+            ),
+            "archivo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, periodo=None, trabajador=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._periodo_fijo = periodo
+        self._trabajador_fijo = trabajador
+        self.fields["fecha"].input_formats = ["%Y-%m-%d"]
+        self.fields["observaciones"].required = False
+        self.fields["archivo"].required = False
+        self.fields["motivo"].required = False
+        self.fields["monto"].help_text = (
+            "Monto a liquidar por el finiquito. Alimenta el concepto "
+            "FINIQUITO al validar, no una columna de la liquidación."
+        )
+
+        trabajadores = Trabajador.objects.filter(activo=True)
+        if self.instance.pk and self.instance.trabajador_id:
+            trabajadores = Trabajador.objects.filter(
+                Q(pk=self.instance.trabajador_id) | Q(activo=True)
+            )
+        self.fields["trabajador"].queryset = trabajadores.order_by(
+            "nombre_completo"
+        )
+
+        periodos = PeriodoRemuneracion.objects.exclude(
+            estado=PeriodoRemuneracion.Estado.CERRADO
+        )
+        if self.instance.pk and self.instance.periodo_id:
+            periodos = PeriodoRemuneracion.objects.filter(
+                Q(pk=self.instance.periodo_id)
+                | ~Q(estado=PeriodoRemuneracion.Estado.CERRADO)
+            )
+        self.fields["periodo"].queryset = periodos.order_by("-anio", "-mes")
+
+        contratos = Contrato.objects.select_related("trabajador", "cargo")
+        trabajador_ref = trabajador or (
+            self.instance.trabajador if self.instance.pk else None
+        )
+        if trabajador_ref is not None:
+            contratos = contratos.filter(trabajador=trabajador_ref)
+        self.fields["contrato"].queryset = contratos.order_by(
+            "-fecha_inicio"
+        )
+
+        if periodo is not None and "periodo" in self.fields:
+            del self.fields["periodo"]
+            fecha_widget = self.fields["fecha"].widget
+            fecha_widget.attrs["min"] = periodo.fecha_inicio.isoformat()
+            fecha_widget.attrs["max"] = periodo.fecha_fin.isoformat()
+        if trabajador is not None and "trabajador" in self.fields:
+            del self.fields["trabajador"]
+
+    def clean(self):
+        cleaned = super().clean()
+        trabajador = cleaned.get("trabajador") or self._trabajador_fijo
+        periodo = cleaned.get("periodo") or self._periodo_fijo
+        if self.instance.pk:
+            trabajador = trabajador or self.instance.trabajador
+            periodo = periodo or self.instance.periodo
+        if periodo and periodo.esta_cerrado:
+            raise ValidationError(
+                "El período está cerrado. No se pueden modificar finiquitos."
+            )
+        cleaned["trabajador"] = trabajador
+        cleaned["periodo"] = periodo
+        return cleaned
+
+    def save(self, commit=True):
+        usuario = self.instance.actualizado_por or self.instance.creado_por
+        return registrar_finiquito(
+            trabajador=self.cleaned_data["trabajador"],
+            contrato=self.cleaned_data["contrato"],
+            periodo=self.cleaned_data["periodo"],
+            fecha=self.cleaned_data["fecha"],
+            monto=self.cleaned_data["monto"],
+            motivo=self.cleaned_data.get("motivo") or "",
+            observaciones=self.cleaned_data.get("observaciones") or "",
+            archivo=self.cleaned_data.get("archivo"),
+            usuario=usuario,
+            instance=self.instance if self.instance.pk else None,
+        )
+
+
+class FiniquitoDocumentoForm(forms.ModelForm):
+    class Meta:
+        model = Finiquito
+        fields = ["observaciones", "archivo"]
+        widgets = {
+            "observaciones": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3}
+            ),
+            "archivo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }

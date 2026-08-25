@@ -16,6 +16,9 @@
     {% if perms.remuneraciones.view_movimientoremuneracion %}
       <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_movimientos' periodo.pk %}">Movimientos</a>
     {% endif %}
+    {% if perms.remuneraciones.view_finiquito %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_finiquitos' periodo.pk %}">Finiquitos</a>
+    {% endif %}
     <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_lista' %}">Volver</a>
   </div>
 </div>

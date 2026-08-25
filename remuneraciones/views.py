@@ -20,6 +20,8 @@ from django.views.generic import (
 from core.mixins import AuditFormMixin
 from remuneraciones.forms import (
     ConceptoRemuneracionForm,
+    FiniquitoDocumentoForm,
+    FiniquitoForm,
     HoraExtraCargaRapidaFormSet,
     HoraExtraForm,
     MovimientoCargaRapidaFormSet,
@@ -29,9 +31,17 @@ from remuneraciones.forms import (
 )
 from remuneraciones.models import (
     ConceptoRemuneracion,
+    Finiquito,
     HoraExtra,
     MovimientoRemuneracion,
     PeriodoRemuneracion,
+)
+from remuneraciones.services.finiquitos import (
+    acciones_disponibles as acciones_finiquito,
+    anular as anular_finiquito,
+    pagar as pagar_finiquito,
+    terminar_contrato_por_finiquito,
+    validar as validar_finiquito,
 )
 from remuneraciones.services.horas_extra import (
     suma_horas_extra,
@@ -961,3 +971,239 @@ class PeriodoMovimientosView(
                 ),
             },
         )
+
+
+class FiniquitoListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
+    permission_required = "remuneraciones.view_finiquito"
+    model = Finiquito
+    paginate_by = 50
+    template_name = "remuneraciones/finiquitos/lista.html"
+    context_object_name = "finiquitos"
+
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related("trabajador", "contrato", "periodo")
+        )
+        trabajador_id = self.kwargs.get("trabajador_id") or self.request.GET.get(
+            "trabajador"
+        )
+        periodo_id = self.kwargs.get("periodo_id") or self.request.GET.get(
+            "periodo"
+        )
+        estado = self.request.GET.get("estado", "").strip()
+        if trabajador_id:
+            qs = qs.filter(trabajador_id=trabajador_id)
+        if periodo_id:
+            qs = qs.filter(periodo_id=periodo_id)
+        if estado:
+            qs = qs.filter(estado=estado)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q_trabajador"] = str(
+            self.kwargs.get("trabajador_id")
+            or self.request.GET.get("trabajador")
+            or ""
+        )
+        context["q_periodo"] = str(
+            self.kwargs.get("periodo_id")
+            or self.request.GET.get("periodo")
+            or ""
+        )
+        context["q_estado"] = self.request.GET.get("estado", "").strip()
+        context["trabajadores"] = Trabajador.objects.filter(
+            activo=True
+        ).order_by("nombre_completo")
+        context["periodos"] = PeriodoRemuneracion.objects.all()
+        context["estados"] = Finiquito.Estado.choices
+        context["trabajador"] = None
+        context["periodo"] = None
+        if self.kwargs.get("trabajador_id"):
+            context["trabajador"] = get_object_or_404(
+                Trabajador, pk=self.kwargs["trabajador_id"]
+            )
+        if self.kwargs.get("periodo_id"):
+            context["periodo"] = get_object_or_404(
+                PeriodoRemuneracion, pk=self.kwargs["periodo_id"]
+            )
+        return context
+
+
+class FiniquitoDetailView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DetailView,
+):
+    permission_required = "remuneraciones.view_finiquito"
+    model = Finiquito
+    template_name = "remuneraciones/finiquitos/detalle.html"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            "trabajador",
+            "contrato",
+            "periodo",
+            "liquidacion",
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["acciones"] = acciones_finiquito(self.object)
+        context["movimiento"] = None
+        if self.object.liquidacion_id:
+            context["movimiento"] = (
+                self.object.liquidacion.movimientos.filter(
+                    concepto__codigo="FINIQUITO"
+                ).first()
+            )
+        return context
+
+
+class FiniquitoCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    CreateView,
+):
+    permission_required = "remuneraciones.add_finiquito"
+    model = Finiquito
+    form_class = FiniquitoForm
+    template_name = "remuneraciones/finiquitos/form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.periodo = None
+        self.trabajador = None
+        if kwargs.get("periodo_id"):
+            self.periodo = get_object_or_404(
+                PeriodoRemuneracion, pk=kwargs["periodo_id"]
+            )
+        if kwargs.get("trabajador_id"):
+            self.trabajador = get_object_or_404(
+                Trabajador, pk=kwargs["trabajador_id"]
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["periodo"] = self.periodo
+        kwargs["trabajador"] = self.trabajador
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["periodo"] = self.periodo
+        context["trabajador"] = self.trabajador
+        return context
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except ValidationError as exc:
+            form.add_error(None, _mensaje_error(exc))
+            return self.form_invalid(form)
+        messages.success(self.request, "Finiquito registrado en borrador.")
+        return response
+
+
+class FiniquitoUpdateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    UpdateView,
+):
+    permission_required = "remuneraciones.change_finiquito"
+    model = Finiquito
+    template_name = "remuneraciones/finiquitos/form.html"
+
+    def get_form_class(self):
+        if self.object.estado == Finiquito.Estado.BORRADOR:
+            return FiniquitoForm
+        return FiniquitoDocumentoForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if self.get_form_class() is FiniquitoForm:
+            kwargs["periodo"] = self.object.periodo
+            kwargs["trabajador"] = self.object.trabajador
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["periodo"] = self.object.periodo
+        context["trabajador"] = self.object.trabajador
+        return context
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except ValidationError as exc:
+            form.add_error(None, _mensaje_error(exc))
+            return self.form_invalid(form)
+        messages.success(self.request, "Finiquito actualizado.")
+        return response
+
+
+class FiniquitoDeleteView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DeleteView,
+):
+    permission_required = "remuneraciones.delete_finiquito"
+    model = Finiquito
+    template_name = "remuneraciones/finiquitos/confirmar_borrar.html"
+
+    def form_valid(self, form):
+        try:
+            self.object.delete()
+        except ValidationError as exc:
+            messages.error(self.request, _mensaje_error(exc))
+            return redirect(self.object.get_absolute_url())
+        messages.success(self.request, "Finiquito eliminado.")
+        return redirect("remuneraciones:finiquito_lista")
+
+
+class FiniquitoAccionView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.change_finiquito"
+    accion = None
+
+    def post(self, request, pk):
+        finiquito = get_object_or_404(Finiquito, pk=pk)
+        try:
+            if self.accion == "validar":
+                validar_finiquito(finiquito, usuario=request.user)
+                messages.success(
+                    request,
+                    "Finiquito validado. Se reflejó en el concepto FINIQUITO "
+                    "de la liquidación (sin duplicar si se vuelve a calcular).",
+                )
+            elif self.accion == "pagar":
+                pagar_finiquito(finiquito, usuario=request.user)
+                messages.success(request, "Finiquito marcado como pagado.")
+            elif self.accion == "anular":
+                anular_finiquito(finiquito, usuario=request.user)
+                messages.success(
+                    request,
+                    "Finiquito anulado. Se quitó el movimiento de la liquidación.",
+                )
+            elif self.accion == "terminar_contrato":
+                terminar_contrato_por_finiquito(
+                    finiquito, usuario=request.user
+                )
+                messages.success(
+                    request,
+                    "Contrato cerrado en la fecha del finiquito.",
+                )
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+        return redirect("remuneraciones:finiquito_detalle", pk=pk)

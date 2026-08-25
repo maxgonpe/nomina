@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from rrhh.models import AnexoContrato, Contrato
@@ -66,3 +67,30 @@ def condicion_vigente(trabajador, fecha):
         sueldo_base=sueldo,
         anexo=ultimo,
     )
+
+
+def terminar_contrato(contrato, fecha, usuario=None):
+    """
+    Cierra el contrato en una fecha. Lo invoca el finiquito (u otro flujo)
+    de forma explícita: nunca un save() oculto de Finiquito.
+    """
+    if contrato is None:
+        raise ValidationError("Debe indicar un contrato.")
+    if fecha is None:
+        raise ValidationError({"fecha": "La fecha de término es obligatoria."})
+    if fecha < contrato.fecha_inicio:
+        raise ValidationError(
+            {
+                "fecha": (
+                    "La fecha de término no puede ser anterior "
+                    "al inicio del contrato."
+                )
+            }
+        )
+    contrato.fecha_termino = fecha
+    contrato.estado = Contrato.Estado.TERMINADO
+    if usuario is not None:
+        contrato.actualizado_por = usuario
+    contrato.full_clean()
+    contrato.save()
+    return contrato

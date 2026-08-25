@@ -15,8 +15,7 @@ Lee en este orden, sin rehacer lo ya cerrado:
 3. .cursor/skills/nomina-sistema/SKILL.md
 4. La mini-especificación del siguiente ítem en otros/mini-especificaciones/ (o otros/pdf/)
 
-Siguiente tarea: REM008 — Finiquitos.
-No implementar REM005 todavía (va después de 007 y 008).
+Siguiente tarea: REM005 — Liquidación mensual (motor).
 Django es la fuente oficial. Reutilizar modelos existentes. UI en español (Chile).
 ```
 
@@ -48,7 +47,7 @@ Sep–dic 2026 en el Excel son **plantilla**. Tener la hoja no significa que el 
 5. **Centros de costo por alias.** OFC/OFI/OFICINA CENTRAL son el mismo centro. Homologar con `AliasCentroCosto`.
 6. **Cálculo en `services/`**, no en views ni en Excel. Dinero y tasas: `Decimal`.
 7. **Soft-delete:** `activo=False`. No borrar históricos.
-8. **REM005 (motor) no se adelanta.** Necesita 001–004 y 006–008 con datos reales, no simulados.
+8. **REM005 (motor)** usa insumos reales de HE, movimientos y finiquitos. No hardcodear factores ni columnas por concepto.
 
 Fórmulas oficiales (Bloque 1): ver `.cursor/skills/nomina-sistema/referencia-dominio.md`.
 
@@ -94,7 +93,7 @@ Django 5.2.17, SQLite ahora (diseñar para PostgreSQL), venv en `.env/`, locale 
 cd /home/maxgonpe/nomina
 source .env/bin/activate
 python manage.py runserver 127.0.0.1:8000
-python manage.py test rrhh core remuneraciones   # 70 OK al cerrar REM007
+python manage.py test rrhh core remuneraciones   # 81 OK al cerrar REM008
 ```
 
 Login: `/cuentas/login/`. Hay un superusuario de prueba `admin`/`admin`; el usuario también creó el suyo. No depender de esa clave.
@@ -116,11 +115,10 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → mini-spec del siguien
 
 ---
 
-## Estado al corte (24 ago 2026)
+## Estado al corte (25 ago 2026)
 
-**Cerrado:** infra + REM001 + REM002 + REM003 + REM004 + REM006 + REM007.  
-**Siguiente:** **REM008** (finiquitos).  
-**No hacer aún:** REM005.
+**Cerrado:** infra + REM001–004 + REM006–008.  
+**Siguiente:** **REM005** (motor de liquidación).
 
 | ID | Qué | Rutas / servicios clave |
 |----|-----|-------------------------|
@@ -131,8 +129,9 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → mini-spec del siguien
 | REM004 | Conceptos + parámetros con vigencia | `/remuneraciones/conceptos/`, `/parametros/`; `valor()` |
 | REM006 | HE; suma = insumo REM005 | `/remuneraciones/horas-extra/`; `suma_horas_extra()` |
 | REM007 | Movimientos por concepto; signo = tipo | `/remuneraciones/movimientos/`; `registrar_movimiento()`, `suma_movimientos()` |
+| REM008 | Finiquito propio; alimenta FINIQUITO sin duplicar | `/remuneraciones/finiquitos/`; `validar()`, `sincronizar_movimiento_finiquito()` |
 
-Migraciones aplicadas: `rrhh` 0002, `core` 0002, `remuneraciones` 0004 (PRESTAMO_ENTREGADO).
+Migraciones aplicadas: `rrhh` 0002, `core` 0002, `remuneraciones` 0005.
 
 Catálogo inicial de conceptos: SUELDO_BASE, HORAS_EXTRA, AGUINALDO, ALOJAMIENTO, MOVILIZACION, COLACION, DESGASTE_HERRAMIENTAS, BONO_PRODUCCION, BONO_ASISTENCIA, FINIQUITO, ANTICIPO, PRESTAMO_ENTREGADO, PRESTAMO_DESCUENTO, INASISTENCIA. En verificación UI existe además **BONO_FAENA** (un haber nuevo no toca `LiquidacionMensual`).
 
@@ -141,20 +140,27 @@ Catálogo inicial de conceptos: SUELDO_BASE, HORAS_EXTRA, AGUINALDO, ALOJAMIENTO
 ### Datos locales de prueba (se pueden dejar o borrar)
 
 - Trabajador `ANA PRUEBA PEREZ` / `18.651.495-5` con contrato desde 01-01-2026 (cargo MAESTRO, CC EGC, sueldo 800.000)
-- Período **Agosto 2026** (ABIERTO) con horas extra y movimientos de verificación (aguinaldo, anticipo, BONO_FAENA)
-- Liquidación **borrador** creada al registrar el primer movimiento
+- Período **Agosto 2026** (ABIERTO) con horas extra, movimientos (aguinaldo, anticipo, BONO_FAENA) y un **finiquito validado** de verificación (mutuo acuerdo, $500.000; contrato sigue vigente)
+- Liquidación **borrador** creada al registrar movimientos / validar el finiquito
 - Concepto `BONO_FAENA`
 
 ---
 
-## REM008 — qué hay que hacer al retomar
+## REM005 — qué hay que hacer al retomar
 
-Mini-spec: `otros/pdf/` (REM008 finiquitos).
+Mini-spec: `otros/pdf/REM005 — Liquidación mensual.pdf`.
 
-- Reutilizar `Finiquito` (trabajador, contrato, período, monto, estado, archivo).
-- Alimenta la liquidación (concepto FINIQUITO) **sin duplicar** cuando REM005 recalcule.
-- Período cerrado ya bloquea finiquitos (hook en el modelo).
-- Luego: **REM005 motor** → REM009 costos → REM010 resumen anual.
+- Motor en `remuneraciones/services/` (no en views). Snapshots de sueldo, cargo y centro de costo al calcular.
+- Insumos: `suma_horas_extra`, `suma_movimientos`, `suma_finiquitos` / `sincronizar_movimiento_finiquito()`, `valor("FACTOR_HE", fecha)`, `condicion_vigente`.
+- No hardcodear factores. Un anexo posterior no reescribe liquidaciones ya calculadas (snapshots).
+- Colación/movilización/desgaste automáticos si hay parámetro con monto: `dias_trabajados * (valor_mensual / 30)`.
+- Haberes − descuentos; no agregar columnas por concepto.
+
+## REM008 — ya cerrado (no rehacer)
+
+- Entidad `Finiquito` (BORRADOR → VALIDADO → PAGADO / ANULADO). PDF en media.
+- Validar genera un movimiento FINIQUITO CALCULADO y bloqueado. Sincronizar de nuevo no duplica.
+- `terminar_contrato(contrato, fecha)` es explícito; validar no cierra el contrato.
 
 ## REM007 — ya cerrado (no rehacer)
 
@@ -177,6 +183,7 @@ Mini-spec: `otros/pdf/` (REM008 finiquitos).
 | Períodos | `/remuneraciones/periodos/` |
 | Horas extra | `/remuneraciones/horas-extra/` |
 | Movimientos | `/remuneraciones/movimientos/` |
+| Finiquitos | `/remuneraciones/finiquitos/` |
 | Conceptos | `/remuneraciones/conceptos/` |
 | Parámetros | `/parametros/` |
 | Admin | `/admin/` |
@@ -187,8 +194,8 @@ Nav en `templates/base.html`. Permisos por modelo Django (`view_` / `add_` / `ch
 
 ## Qué no hacer en el chat nuevo
 
-- No rehacer REM001–004 ni REM006 ni REM007 ni volver a copiar `otros/modelos/`.
-- No saltar a REM005.
+- No rehacer REM001–004 ni REM006–008 ni volver a copiar `otros/modelos/`.
+- REM005 es el siguiente; no saltar a REM009/010.
 - No hardcodear `0.0079545` ni `0.19`.
 - No crear modelos por mes/año ni columnas de bono en la liquidación.
 - No commitear a menos que el usuario lo pida. No pushear a menos que lo pida.
