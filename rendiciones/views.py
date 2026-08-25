@@ -41,6 +41,7 @@ from rendiciones.services.rendiciones import (
     puede_editar_documentos,
     validar_cuadratura,
 )
+from rendiciones.services.integracion import estado_financiero
 from rendiciones.services.reportes import (
     ESTADOS_OFICIALES,
     anios_disponibles,
@@ -212,6 +213,7 @@ class RendicionDetailView(
         context["puede_anular"] = acciones["anular"]
         context["detalles"] = self.object.detalles.select_related("centro_costo")
         context["documentos"] = self.object.documentos.all()
+        context["estado_financiero"] = estado_financiero(self.object)
         try:
             validar_cuadratura(self.object)
             context["cuadratura_ok"] = True

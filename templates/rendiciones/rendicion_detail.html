@@ -62,6 +62,18 @@
         <dt class="col-sm-3">Motivo de rechazo</dt>
         <dd class="col-sm-9">{{ rendicion.motivo_rechazo|linebreaksbr }}</dd>
       {% endif %}
+      <dt class="col-sm-3">Estado financiero</dt>
+      <dd class="col-sm-9">
+        {% if estado_financiero.codigo == "PENDIENTE" %}
+          <span class="badge text-bg-warning">{{ estado_financiero.label }}</span>
+        {% elif estado_financiero.codigo == "REGISTRADA" %}
+          <span class="badge text-bg-info">{{ estado_financiero.label }}</span>
+        {% elif estado_financiero.codigo == "PAGADA" %}
+          <span class="badge text-bg-success">{{ estado_financiero.label }}</span>
+        {% else %}
+          <span class="text-muted">{{ estado_financiero.label }}</span>
+        {% endif %}
+      </dd>
     </dl>
   </div>
 </div>

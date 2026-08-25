@@ -80,8 +80,8 @@ rendiciones/
 | REN004 | ✓ Múltiples respaldos trazables en media |
 | REN005 | ✓ Ninguna transición salta el flujo |
 | REN006 | ✓ Totales Django reconstruyen la tabla Excel de rendiciones |
-| REN007 | Salida normalizada a Finanzas/Excel sin conocer su interior |
+| REN007 | ✓ Salida normalizada a Finanzas/Excel sin conocer su interior |
 
 ## Roadmap posterior (contexto)
 
-`Bloque 1 REM ✓ → Bloque 2 REN → Bloque 3 Facturación → 4 Impuestos → 5 Finanzas → 6 Contabilidad → 7 Integración Excel`
+`Bloque 1 REM ✓ → Bloque 2 REN ✓ → Bloque 3 Facturación → 4 Impuestos → 5 Finanzas → 6 Contabilidad → 7 Integración Excel`

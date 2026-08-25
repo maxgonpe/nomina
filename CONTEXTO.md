@@ -17,10 +17,11 @@ Lee en este orden, sin rehacer lo ya cerrado:
 5. La mini-especificación del siguiente ítem en otros/mini-especificaciones/REN/
    (docx; PDF en otros/pdf/ son respaldo — algunos exportan casi vacíos)
 
-Siguiente tarea: REN007 — Preparación Finanzas e integración Excel (cierra Bloque 2).
-Django es la fuente oficial. Solo interfaces; no implementar Finanzas.
-UI en español (Chile). Bloque 1 y REN001–REN006 cerrados — no rehacerlos.
-Orden Bloque 2: REN001 ✓ → 002 ✓ → 003 ✓ → 004 ✓ → 005 ✓ → 006 ✓ → 007.
+Siguiente tarea: Bloque 3 — Facturación + compras (cuando haya mini-specs).
+Bloque 1 (REM) y Bloque 2 (REN001–REN007) cerrados — no rehacerlos.
+Django es la fuente oficial. Finanzas/Excel consumirán las APIs internas de REN007.
+UI en español (Chile).
+Orden bloques: 1 Remuneraciones ✓ → 2 Rendiciones ✓ → 3 Facturación → 4 Impuestos → 5 Finanzas → 6 Contabilidad → 7 Integración Excel.
 ```
 
 ---
@@ -123,7 +124,7 @@ cd /home/maxgonpe/nomina
 source .env/bin/activate
 python manage.py runserver 127.0.0.1:8000
 python manage.py test rrhh core remuneraciones   # 120 OK al cerrar Bloque 1
-python manage.py test rendiciones                # 61 OK al cerrar REN006
+python manage.py test rendiciones                # 69 OK al cerrar Bloque 2 (REN007)
 ```
 
 Login: `/cuentas/login/`. Hay un superusuario de prueba `admin`/`admin`; el usuario también creó el suyo. No depender de esa clave.
@@ -149,19 +150,13 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 ## Estado al corte (25 ago 2026)
 
-**Cerrado:** infra + **Bloque 1** + **REN001–REN006**.  
-**Siguiente:** **REN007 — Preparación Finanzas e integración Excel** (cierra Bloque 2).
+**Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)**.  
+**Siguiente:** **Bloque 3 — Facturación + compras** (mini-specs cuando existan).
 
 | ID | Qué | Estado |
 |----|-----|--------|
 | REM001–010 | Remuneraciones completas | Hecho |
-| REN001 | Registro cabecera rendición | Hecho — `/rendiciones/` |
-| REN002 | Distribución por CC | Hecho — `/rendiciones/<pk>/distribucion/` |
-| REN003 | Cuadratura / presentar | Hecho — `/rendiciones/<pk>/presentar/` |
-| REN004 | Documentos / respaldos | Hecho — adjuntos en ficha |
-| REN005 | Flujo de estados | Hecho — aprobar/rechazar/reabrir/anular |
-| REN006 | Reportes / filtros | Hecho — `/rendiciones/resumen/` |
-| REN007 | Frontera Finanzas + Excel | **Siguiente** |
+| REN001–007 | Rendiciones completas | **Hecho — Bloque 2 cerrado** |
 | REN003 | Cuadratura | Pendiente |
 | REN004 | Documentos / respaldos | Pendiente |
 | REN005 | Flujo de estados | Pendiente |
@@ -188,7 +183,9 @@ Migraciones Bloque 1: `rrhh` 0002, `core` 0002, `remuneraciones` 0007.
 4. **REN004** ✓ — Documentos PDF/JPG/PNG; media por año/id; 7 tests OK.
 5. **REN005** ✓ — Flujo de estados + permisos; motivo rechazo/anulación; 11 tests OK.
 6. **REN006** ✓ — Filtros + resumen por CC/trabajador + `filas_exportacion`; 9 tests OK.
-7. **REN007** — `datos_financieros()` / `filas_excel()`; no implementar módulo Finanzas.
+7. **REN007** ✓ — `datos_financieros()` / `filas_excel()`; frontera sin implementar Finanzas; 8 tests OK.
+
+**Bloque 2 cerrado.** Siguiente: Facturación (bloque 3).
 
 No priorizar `integracion_excel` global antes de cerrar REN: la spec del sistema pone Rendiciones antes que Excel de varios módulos.
 

@@ -13,7 +13,8 @@ Al trabajar en este repo, seguir el skill `nomina-sistema`, leer `CONTEXTO.md` (
 - Rendiciones: distribución por `RendicionDetalle` → `CentroCosto`; no columnas fijas CASA/EGC/CGA/OFI.
 - Parámetros de negocio con vigencia; no hardcodear factores.
 - Bloque 1 (cerrado): REM001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010.
-- Bloque 2 (activo): REN001 → 002 → 003 → 004 → 005 → 006 → 007.
-- Leer `otros/mini-especificaciones/` (REN en `…/REN/`) antes de codear un módulo.
+- Bloque 2 (cerrado): REN001 → 002 → 003 → 004 → 005 → 006 → 007.
+- Siguiente: Bloque 3 Facturación (cuando haya mini-specs).
+- Leer `otros/mini-especificaciones/` antes de codear un módulo.
 - Reutilizar los modelos ya existentes en las apps.
-- No implementar Finanzas/IVA/asientos dentro del Bloque 2.
+- Finanzas/Excel consumen `rendiciones.services.integracion` (REN007); no reinventar esa frontera.

@@ -55,7 +55,7 @@ Infra primero. Luego bloques:
 
 `REM001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010`
 
-### Bloque 2 — Rendiciones (activo)
+### Bloque 2 — Rendiciones (cerrado)
 
 `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
 
@@ -82,4 +82,4 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 Bitácora: [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md). Handoff: [`CONTEXTO.md`](../../../CONTEXTO.md).
 
-Corte: **Bloque 1 + REN001–REN006 cerrados**. **Siguiente: REN007** (interfaces Finanzas/Excel; cierra Bloque 2).
+Corte: **Bloque 1 + Bloque 2 (REN001–REN007) cerrados**. **Siguiente: Bloque 3 (Facturación)** cuando haya mini-specs.
