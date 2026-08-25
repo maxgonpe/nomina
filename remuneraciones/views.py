@@ -22,17 +22,25 @@ from remuneraciones.forms import (
     ConceptoRemuneracionForm,
     HoraExtraCargaRapidaFormSet,
     HoraExtraForm,
+    MovimientoCargaRapidaFormSet,
+    MovimientoForm,
     PeriodoForm,
     ReaperturaPeriodoForm,
 )
 from remuneraciones.models import (
     ConceptoRemuneracion,
     HoraExtra,
+    MovimientoRemuneracion,
     PeriodoRemuneracion,
 )
 from remuneraciones.services.horas_extra import (
     suma_horas_extra,
     totales_horas_extra_por_trabajador,
+)
+from remuneraciones.services.movimientos import (
+    eliminar_movimiento,
+    suma_movimientos,
+    totales_movimientos_periodo,
 )
 from remuneraciones.services.periodos import (
     acciones_disponibles,
@@ -637,6 +645,318 @@ class PeriodoHorasExtraView(
                     not self.periodo.esta_cerrado
                     and self.request.user.has_perm(
                         "remuneraciones.add_horaextra"
+                    )
+                ),
+            },
+        )
+
+
+class MovimientoListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
+    permission_required = "remuneraciones.view_movimientoremuneracion"
+    model = MovimientoRemuneracion
+    paginate_by = 50
+    template_name = "remuneraciones/movimientos/lista.html"
+    context_object_name = "movimientos"
+
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related(
+                "concepto",
+                "liquidacion__trabajador",
+                "liquidacion__periodo",
+            )
+        )
+        trabajador_id = self.kwargs.get("trabajador_id") or self.request.GET.get(
+            "trabajador"
+        )
+        periodo_id = self.kwargs.get("periodo_id") or self.request.GET.get(
+            "periodo"
+        )
+        concepto_id = self.request.GET.get("concepto", "").strip()
+        tipo = self.request.GET.get("tipo", "").strip()
+        if trabajador_id:
+            qs = qs.filter(liquidacion__trabajador_id=trabajador_id)
+        if periodo_id:
+            qs = qs.filter(liquidacion__periodo_id=periodo_id)
+        if concepto_id:
+            qs = qs.filter(concepto_id=concepto_id)
+        if tipo:
+            qs = qs.filter(concepto__tipo=tipo)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q_trabajador"] = str(
+            self.kwargs.get("trabajador_id")
+            or self.request.GET.get("trabajador")
+            or ""
+        )
+        context["q_periodo"] = str(
+            self.kwargs.get("periodo_id")
+            or self.request.GET.get("periodo")
+            or ""
+        )
+        context["q_concepto"] = self.request.GET.get("concepto", "").strip()
+        context["q_tipo"] = self.request.GET.get("tipo", "").strip()
+        context["trabajadores"] = Trabajador.objects.filter(
+            activo=True
+        ).order_by("nombre_completo")
+        context["periodos"] = PeriodoRemuneracion.objects.all()
+        context["conceptos"] = ConceptoRemuneracion.objects.filter(
+            activo=True
+        ).order_by("orden", "nombre")
+        context["tipos"] = ConceptoRemuneracion.Tipo.choices
+        context["trabajador"] = None
+        context["periodo"] = None
+        trabajador_id = self.kwargs.get("trabajador_id")
+        periodo_id = self.kwargs.get("periodo_id")
+        if trabajador_id:
+            context["trabajador"] = get_object_or_404(
+                Trabajador, pk=trabajador_id
+            )
+        if periodo_id:
+            context["periodo"] = get_object_or_404(
+                PeriodoRemuneracion, pk=periodo_id
+            )
+        if context["trabajador"] and context["periodo"]:
+            context["suma_haberes"] = suma_movimientos(
+                context["trabajador"],
+                context["periodo"],
+                tipo=ConceptoRemuneracion.Tipo.HABER,
+            )
+            context["suma_descuentos"] = suma_movimientos(
+                context["trabajador"],
+                context["periodo"],
+                tipo=ConceptoRemuneracion.Tipo.DESCUENTO,
+            )
+        return context
+
+
+class MovimientoCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    CreateView,
+):
+    permission_required = "remuneraciones.add_movimientoremuneracion"
+    model = MovimientoRemuneracion
+    form_class = MovimientoForm
+    template_name = "remuneraciones/movimientos/form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.periodo = None
+        self.trabajador = None
+        if kwargs.get("periodo_id"):
+            self.periodo = get_object_or_404(
+                PeriodoRemuneracion, pk=kwargs["periodo_id"]
+            )
+        if kwargs.get("trabajador_id"):
+            self.trabajador = get_object_or_404(
+                Trabajador, pk=kwargs["trabajador_id"]
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["periodo"] = self.periodo
+        kwargs["trabajador"] = self.trabajador
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["periodo"] = self.periodo
+        context["trabajador"] = self.trabajador
+        return context
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except ValidationError as exc:
+            form.add_error(None, _mensaje_error(exc))
+            return self.form_invalid(form)
+        messages.success(self.request, "Movimiento registrado.")
+        return response
+
+    def get_success_url(self):
+        if self.periodo:
+            return reverse(
+                "remuneraciones:periodo_movimientos",
+                args=[self.periodo.pk],
+            )
+        if self.trabajador:
+            return reverse(
+                "remuneraciones:trabajador_movimientos",
+                args=[self.trabajador.pk],
+            )
+        return reverse("remuneraciones:movimiento_lista")
+
+
+class MovimientoUpdateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    UpdateView,
+):
+    permission_required = "remuneraciones.change_movimientoremuneracion"
+    model = MovimientoRemuneracion
+    form_class = MovimientoForm
+    template_name = "remuneraciones/movimientos/form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["periodo"] = self.object.liquidacion.periodo
+        kwargs["trabajador"] = self.object.liquidacion.trabajador
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["periodo"] = self.object.liquidacion.periodo
+        context["trabajador"] = self.object.liquidacion.trabajador
+        return context
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except ValidationError as exc:
+            form.add_error(None, _mensaje_error(exc))
+            return self.form_invalid(form)
+        messages.success(self.request, "Movimiento actualizado.")
+        return response
+
+    def get_success_url(self):
+        return reverse(
+            "remuneraciones:periodo_movimientos",
+            args=[self.object.liquidacion.periodo_id],
+        )
+
+
+class MovimientoDeleteView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DeleteView,
+):
+    permission_required = "remuneraciones.delete_movimientoremuneracion"
+    model = MovimientoRemuneracion
+    template_name = "remuneraciones/movimientos/confirmar_borrar.html"
+
+    def form_valid(self, form):
+        periodo_id = self.object.liquidacion.periodo_id
+        try:
+            eliminar_movimiento(self.object)
+        except ValidationError as exc:
+            messages.error(self.request, _mensaje_error(exc))
+            return redirect(
+                "remuneraciones:periodo_movimientos",
+                periodo_id=periodo_id,
+            )
+        messages.success(self.request, "Movimiento eliminado.")
+        return redirect(
+            "remuneraciones:periodo_movimientos",
+            periodo_id=periodo_id,
+        )
+
+
+class PeriodoMovimientosView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.view_movimientoremuneracion"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.periodo = get_object_or_404(
+            PeriodoRemuneracion, pk=kwargs["periodo_id"]
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def _formset(self, data=None):
+        return MovimientoCargaRapidaFormSet(
+            data=data,
+            queryset=MovimientoRemuneracion.objects.none(),
+            form_kwargs={"periodo": self.periodo},
+            prefix="mov",
+        )
+
+    def get(self, request, periodo_id):
+        return self._render(self._formset())
+
+    def post(self, request, periodo_id):
+        if not request.user.has_perm(
+            "remuneraciones.add_movimientoremuneracion"
+        ):
+            messages.error(
+                request,
+                "No tiene permiso para registrar movimientos.",
+            )
+            return redirect(
+                "remuneraciones:periodo_movimientos",
+                periodo_id=self.periodo.pk,
+            )
+        if self.periodo.esta_cerrado:
+            messages.error(
+                request,
+                "El período está cerrado. No se pueden registrar movimientos.",
+            )
+            return redirect(
+                "remuneraciones:periodo_movimientos",
+                periodo_id=self.periodo.pk,
+            )
+        formset = self._formset(data=request.POST)
+        if not formset.is_valid():
+            return self._render(formset)
+        creados = 0
+        try:
+            for form in formset:
+                if not form.has_changed():
+                    continue
+                form.instance.creado_por = request.user
+                form.instance.actualizado_por = request.user
+                form.save()
+                creados += 1
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+            return self._render(formset)
+        if creados:
+            messages.success(
+                request,
+                f"Se registraron {creados} movimiento(s). "
+                "La liquidación queda pendiente de recálculo.",
+            )
+        else:
+            messages.info(request, "No se ingresó ninguna fila.")
+        return redirect(
+            "remuneraciones:periodo_movimientos",
+            periodo_id=self.periodo.pk,
+        )
+
+    def _render(self, formset):
+        registros = (
+            MovimientoRemuneracion.objects.filter(
+                liquidacion__periodo=self.periodo,
+            )
+            .select_related(
+                "concepto",
+                "liquidacion__trabajador",
+            )
+        )
+        return render(
+            self.request,
+            "remuneraciones/movimientos/periodo.html",
+            {
+                "periodo": self.periodo,
+                "formset": formset,
+                "movimientos": registros,
+                "totales": totales_movimientos_periodo(self.periodo),
+                "puede_cargar": (
+                    not self.periodo.esta_cerrado
+                    and self.request.user.has_perm(
+                        "remuneraciones.add_movimientoremuneracion"
                     )
                 ),
             },

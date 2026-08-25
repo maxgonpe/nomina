@@ -75,6 +75,6 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 ## Estado
 
-La bitácora viva está en [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md) (raíz del repo). Leerla al retomar.
+La bitácora viva está en [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md). El handoff para un chat nuevo está en [`CONTEXTO.md`](../../../CONTEXTO.md).
 
-Corte actual: REM006 cerrado. Siguiente: REM007 (movimientos). REM005 sigue pendiente a propósito (después de 006–008).
+Corte actual: REM007 cerrado. Siguiente: REM008 (finiquitos). REM005 sigue pendiente a propósito (después de 007–008).

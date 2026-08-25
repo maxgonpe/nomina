@@ -13,6 +13,9 @@
     {% if perms.remuneraciones.view_horaextra %}
       <a class="btn btn-outline-primary" href="{% url 'remuneraciones:trabajador_horas_extra' trabajador.pk %}">Horas extra</a>
     {% endif %}
+    {% if perms.remuneraciones.view_movimientoremuneracion %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:trabajador_movimientos' trabajador.pk %}">Movimientos</a>
+    {% endif %}
     {% if perms.rrhh.delete_trabajador and trabajador.activo %}
       <a class="btn btn-outline-danger" href="{% url 'rrhh:trabajador_desactivar' trabajador.pk %}">Desactivar</a>
     {% endif %}

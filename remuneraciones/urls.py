@@ -100,4 +100,39 @@ urlpatterns = [
         views.HoraExtraCreateView.as_view(),
         name="trabajador_hora_extra_crear",
     ),
+    path(
+        "movimientos/",
+        views.MovimientoListView.as_view(),
+        name="movimiento_lista",
+    ),
+    path(
+        "movimientos/nuevo/",
+        views.MovimientoCreateView.as_view(),
+        name="movimiento_crear",
+    ),
+    path(
+        "movimientos/<int:pk>/editar/",
+        views.MovimientoUpdateView.as_view(),
+        name="movimiento_editar",
+    ),
+    path(
+        "movimientos/<int:pk>/borrar/",
+        views.MovimientoDeleteView.as_view(),
+        name="movimiento_borrar",
+    ),
+    path(
+        "periodos/<int:periodo_id>/movimientos/",
+        views.PeriodoMovimientosView.as_view(),
+        name="periodo_movimientos",
+    ),
+    path(
+        "trabajadores/<int:trabajador_id>/movimientos/",
+        views.MovimientoListView.as_view(),
+        name="trabajador_movimientos",
+    ),
+    path(
+        "trabajadores/<int:trabajador_id>/movimientos/nuevo/",
+        views.MovimientoCreateView.as_view(),
+        name="trabajador_movimiento_crear",
+    ),
 ]

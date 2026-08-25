@@ -99,6 +99,19 @@ CONCEPTOS_INICIALES = [
         "orden": 200,
     },
     {
+        "codigo": "PRESTAMO_ENTREGADO",
+        "nombre": "Préstamo entregado",
+        "tipo": "HABER",
+        "naturaleza_calculo": "MANUAL",
+        "proporcional_dias": False,
+        "editable": True,
+        "orden": 205,
+        "descripcion": (
+            "Entrega de dinero al trabajador. No usar el nombre Excel "
+            "PRESTAMOS: el signo lo da este código, no el texto."
+        ),
+    },
+    {
         "codigo": "PRESTAMO_DESCUENTO",
         "nombre": "Descuento de préstamo",
         "tipo": "DESCUENTO",

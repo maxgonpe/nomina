@@ -63,6 +63,23 @@ class LiquidacionMensualAdmin(admin.ModelAdmin):
     inlines = [MovimientoInline]
 
 
+@admin.register(MovimientoRemuneracion)
+class MovimientoRemuneracionAdmin(admin.ModelAdmin):
+    list_display = (
+        "liquidacion",
+        "concepto",
+        "monto",
+        "origen",
+        "bloqueado",
+    )
+    list_filter = ("origen", "concepto__tipo", "bloqueado")
+    search_fields = (
+        "liquidacion__trabajador__nombre_completo",
+        "concepto__codigo",
+        "descripcion",
+    )
+
+
 @admin.register(HoraExtra)
 class HoraExtraAdmin(admin.ModelAdmin):
     list_display = ("trabajador", "periodo", "fecha", "horas")

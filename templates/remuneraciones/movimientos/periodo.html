@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Movimientos {{ periodo.nombre }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Movimientos — {{ periodo.nombre }}</h1>
+    <p class="text-muted mb-0">{{ periodo.fecha_inicio|date:"d-m-Y" }} → {{ periodo.fecha_fin|date:"d-m-Y" }} · {{ periodo.get_estado_display }}</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_detalle' periodo.pk %}">Volver al período</a>
+</div>
+
+<p class="text-muted">
+  Un concepto nuevo (por ejemplo un bono de faena) se elige aquí; no hay que tocar el modelo de liquidación.
+  El import a columnas Excel queda para la integración posterior.
+</p>
+
+{% if totales %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Totales por trabajador y tipo</div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr><th>Trabajador</th><th>Tipo</th><th class="text-end">Total</th></tr>
+      </thead>
+      <tbody>
+        {% for fila in totales %}
+          <tr>
+            <td>{{ fila.liquidacion__trabajador__nombre_completo }}</td>
+            <td>{{ fila.concepto__tipo }}</td>
+            <td class="text-end">{{ fila.total }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if puede_cargar %}
+<h2 class="h5">Carga rápida</h2>
+<p class="text-muted">Puede registrar varias filas sin salir de esta pantalla. Las filas vacías se ignoran.</p>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Trabajador</th>
+              <th>Concepto</th>
+              <th>Monto</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset %}
+              <tr>
+                <td>
+                  {{ form.trabajador }}
+                  {% if form.trabajador.errors %}<div class="text-danger small">{{ form.trabajador.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.concepto }}
+                  {% if form.concepto.errors %}<div class="text-danger small">{{ form.concepto.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.monto }}
+                  {% if form.monto.errors %}<div class="text-danger small">{{ form.monto.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.descripcion }}
+                  {% if form.non_field_errors %}<div class="text-danger small">{{ form.non_field_errors }}</div>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" type="submit">Registrar filas</button>
+    </form>
+  </div>
+</div>
+{% elif periodo.esta_cerrado %}
+  <div class="alert alert-warning">El período está cerrado: no se pueden crear, editar ni borrar movimientos.</div>
+{% endif %}
+
+<h2 class="h5">Registros</h2>
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Trabajador</th>
+          <th>Concepto</th>
+          <th>Tipo</th>
+          <th class="text-end">Monto</th>
+          <th>Origen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in movimientos %}
+          <tr>
+            <td>{{ item.liquidacion.trabajador.nombre_completo }}</td>
+            <td>{{ item.concepto.codigo }}</td>
+            <td>{{ item.concepto.get_tipo_display }}</td>
+            <td class="text-end">
+              {% if item.es_descuento %}−{% else %}+{% endif %}{{ item.monto }}
+            </td>
+            <td>{{ item.get_origen_display }}</td>
+            <td>
+              {% if not periodo.esta_cerrado and not item.bloqueado %}
+                {% if perms.remuneraciones.change_movimientoremuneracion %}
+                  <a href="{% url 'remuneraciones:movimiento_editar' item.pk %}">Editar</a>
+                {% endif %}
+                {% if perms.remuneraciones.delete_movimientoremuneracion %}
+                  <a class="text-danger ms-2" href="{% url 'remuneraciones:movimiento_borrar' item.pk %}">Borrar</a>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-muted">Aún no hay movimientos en este período.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

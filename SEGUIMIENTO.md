@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **24 de agosto de 2026**, al terminar **REM006**.
+Punto de corte: **24 de agosto de 2026**, al terminar **REM007**.
 
-Al retomar: leer este archivo, luego el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM004 ni REM006.
+Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM004 ni REM006 ni REM007.
 
 ## Dónde estamos
 
@@ -13,9 +13,9 @@ Al retomar: leer este archivo, luego el skill `.cursor/skills/nomina-sistema/SKI
 | REM002 Cargos, contratos y anexos | Hecho |
 | REM003 Períodos de remuneración | Hecho |
 | REM004 Conceptos y parámetros | Hecho |
-| REM006 Horas extraordinarias | Hecho — **último cerrado** |
-| REM007 Bonos, anticipos, préstamos y movimientos | **Siguiente** |
-| REM008 Finiquitos | Pendiente |
+| REM006 Horas extraordinarias | Hecho |
+| REM007 Bonos, anticipos, préstamos y movimientos | Hecho — **último cerrado** |
+| REM008 Finiquitos | **Siguiente** |
 | REM005 Liquidación mensual (motor) | Pendiente (después de 003–004 y 006–008) |
 | REM009 Costos mensuales por trabajador | Pendiente |
 | REM010 Resumen anual y gráfico | Pendiente |
@@ -37,7 +37,7 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - Locale `es-cl`, zona `America/Santiago`, fechas `dd-mm-yyyy`
 - `core/validators.py`: RUT (normalizar, validar DV, formatear)
 - Admin de todas las apps
-- Migraciones aplicadas (`rrhh` hasta `0002`, `core` hasta `0002`, `remuneraciones` hasta `0003`)
+- Migraciones aplicadas (`rrhh` hasta `0002`, `core` hasta `0002`, `remuneraciones` hasta `0004`)
 
 ### REM001 — Trabajadores
 
@@ -87,6 +87,23 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - Import/export Excel de la tabla inferior queda para `integracion_excel`
 - Tests: `remuneraciones/test_horas_extra.py`
 
+### REM007 — Bonos, anticipos, préstamos y movimientos
+
+- Listado y filtros: `/remuneraciones/movimientos/`
+- Carga rápida en el período: `/remuneraciones/periodos/<id>/movimientos/`
+- Por trabajador: `/remuneraciones/trabajadores/<id>/movimientos/`
+- Servicio: `remuneraciones/services/movimientos.py` → `registrar_movimiento()`, `suma_movimientos(trabajador, periodo, tipo)`
+- El signo lo da `concepto.tipo` (haber/descuento); el monto siempre es positivo
+- Origen por defecto `MANUAL`. `CALCULADO` / `IMPORTADO_EXCEL` quedan para el motor y la integración
+- Si no hay liquidación, se abre un **borrador** con el contrato vigente (los totales los calcula REM005)
+- Un concepto nuevo (p. ej. BONO_FAENA) no agrega columnas a `LiquidacionMensual`
+- Catálogo explícito de préstamos: `PRESTAMO_ENTREGADO` (haber) y `PRESTAMO_DESCUENTO` (descuento)
+- SUELDO_BASE, HORAS_EXTRA, FINIQUITO e INASISTENCIA no se cargan a mano
+- Período cerrado o movimiento `bloqueado` no crea/edita/borra; cambia el movimiento y marca `requiere_recalculo`
+- Colación/movilización/desgaste automáticos: en REM005, no aquí
+- Import a columnas Excel: `integracion_excel`
+- Tests: `remuneraciones/test_movimientos.py`
+
 ## Cómo retomar
 
 ```bash
@@ -99,12 +116,12 @@ python manage.py runserver 127.0.0.1:8000
 - Usar el superusuario que ya creaste (hay además un `admin`/`admin` de prueba; conviene no depender de esa clave)
 - Tests: `python manage.py test rrhh core remuneraciones`
 
-Primera tarea al volver: **REM007 — Bonos, anticipos, préstamos y movimientos**.
+Primera tarea al volver: **REM008 — Finiquitos**.
 
-1. Leer `otros/mini-especificaciones/` (REM007 / movimientos).
-2. Reutilizar `MovimientoRemuneracion` y `ConceptoRemuneracion`.
-3. Origen MANUAL/CALCULADO/IMPORTADO; no agregar columnas a `LiquidacionMensual`.
-4. Actualizar la tabla de este archivo al cerrar REM007.
+1. Leer `otros/mini-especificaciones/` (REM008 / finiquitos).
+2. Reutilizar `Finiquito`; alimentar la liquidación sin duplicar al recalcular (REM005).
+3. No empezar el motor de liquidación hasta cerrar REM008.
+4. Actualizar la tabla de este archivo al cerrar REM008.
 
 ## Qué no hacer al retomar
 

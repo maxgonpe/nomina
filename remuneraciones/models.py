@@ -531,6 +531,17 @@ class MovimientoRemuneracion(AuditModel):
             ),
         ]
 
+    @property
+    def es_descuento(self):
+        return self.concepto.tipo == ConceptoRemuneracion.Tipo.DESCUENTO
+
+    @property
+    def monto_con_signo(self):
+        """El signo lo determina concepto.tipo, no el texto ni el monto."""
+        if self.es_descuento:
+            return -self.monto
+        return self.monto
+
     def __str__(self):
         return (
             f"{self.liquidacion} - "
@@ -538,15 +549,57 @@ class MovimientoRemuneracion(AuditModel):
             f"{self.monto}"
         )
 
+    def get_absolute_url(self):
+        return reverse("remuneraciones:movimiento_editar", args=[self.pk])
+
     def clean(self):
         super().clean()
         if self.liquidacion_id:
             bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+        if self.monto is not None and self.monto < 0:
+            raise ValidationError(
+                {
+                    "monto": (
+                        "El monto se informa en valor absoluto. "
+                        "El signo lo define el tipo del concepto "
+                        "(haber o descuento)."
+                    )
+                }
+            )
+        if self.bloqueado and self.pk:
+            original = (
+                MovimientoRemuneracion.objects.filter(pk=self.pk)
+                .values("bloqueado")
+                .first()
+            )
+            if original and original["bloqueado"]:
+                raise ValidationError(
+                    "Este movimiento está bloqueado y no se puede modificar."
+                )
 
     def save(self, *args, **kwargs):
         if self.liquidacion_id:
             bloquear_si_periodo_cerrado(self.liquidacion.periodo)
         super().save(*args, **kwargs)
+        marcar_liquidacion_pendiente_recalculo(
+            self.liquidacion.trabajador_id,
+            self.liquidacion.periodo_id,
+        )
+
+    def delete(self, *args, **kwargs):
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+        if self.bloqueado:
+            raise ValidationError(
+                "Este movimiento está bloqueado y no se puede borrar."
+            )
+        trabajador_id = self.liquidacion.trabajador_id
+        periodo_id = self.liquidacion.periodo_id
+        super().delete(*args, **kwargs)
+        marcar_liquidacion_pendiente_recalculo(
+            trabajador_id,
+            periodo_id,
+        )
 
 
 class HoraExtra(AuditModel):

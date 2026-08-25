@@ -27,6 +27,19 @@ class ConceptoCatalogoTests(TestCase):
         self.assertTrue(
             ConceptoRemuneracion.objects.filter(codigo="ANTICIPO").exists()
         )
+        self.assertTrue(
+            ConceptoRemuneracion.objects.filter(
+                codigo="PRESTAMO_ENTREGADO"
+            ).exists()
+        )
+        self.assertEqual(
+            ConceptoRemuneracion.objects.get(codigo="PRESTAMO_ENTREGADO").tipo,
+            ConceptoRemuneracion.Tipo.HABER,
+        )
+        self.assertEqual(
+            ConceptoRemuneracion.objects.get(codigo="PRESTAMO_DESCUENTO").tipo,
+            ConceptoRemuneracion.Tipo.DESCUENTO,
+        )
         self.assertEqual(
             ConceptoRemuneracion.objects.get(codigo="COLACION").tipo,
             ConceptoRemuneracion.Tipo.HABER,

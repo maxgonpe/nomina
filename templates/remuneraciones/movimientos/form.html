@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar movimiento{% else %}Nuevo movimiento{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if form.instance.pk %}Editar movimiento{% else %}Nuevo movimiento{% endif %}</h1>
+<p class="text-muted">
+  El monto se informa en valor absoluto. Un anticipo descuenta porque el concepto es de tipo descuento,
+  no porque se escriba un signo menos.
+</p>
+{% if trabajador %}<p class="fw-semibold mb-2">{{ trabajador.nombre_completo }}</p>{% endif %}
+{% if periodo %}<p class="text-muted">{{ periodo.nombre }}</p>{% endif %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if form.trabajador %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.trabajador.id_for_label }}">Trabajador</label>
+        {{ form.trabajador }}
+        {% if form.trabajador.errors %}<div class="text-danger small">{{ form.trabajador.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if form.periodo %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.periodo.id_for_label }}">Período</label>
+        {{ form.periodo }}
+        {% if form.periodo.errors %}<div class="text-danger small">{{ form.periodo.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.concepto.id_for_label }}">Concepto</label>
+        {{ form.concepto }}
+        {% if form.concepto.errors %}<div class="text-danger small">{{ form.concepto.errors }}</div>{% endif %}
+      </div>
+      <div class="row">
+        {% if form.cantidad %}
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.cantidad.id_for_label }}">Cantidad (opcional)</label>
+          {{ form.cantidad }}
+          {% if form.cantidad.errors %}<div class="text-danger small">{{ form.cantidad.errors }}</div>{% endif %}
+        </div>
+        {% endif %}
+        {% if form.valor_unitario %}
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.valor_unitario.id_for_label }}">Valor unitario (opcional)</label>
+          {{ form.valor_unitario }}
+          {% if form.valor_unitario.errors %}<div class="text-danger small">{{ form.valor_unitario.errors }}</div>{% endif %}
+        </div>
+        {% endif %}
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="{{ form.monto.id_for_label }}">Monto</label>
+          {{ form.monto }}
+          {% if form.monto.help_text %}<div class="form-text">{{ form.monto.help_text }}</div>{% endif %}
+          {% if form.monto.errors %}<div class="text-danger small">{{ form.monto.errors }}</div>{% endif %}
+        </div>
+      </div>
+      {% if form.descripcion %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+        {{ form.descripcion }}
+        {% if form.descripcion.errors %}<div class="text-danger small">{{ form.descripcion.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+      <button class="btn btn-primary" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% if periodo %}{% url 'remuneraciones:periodo_movimientos' periodo.pk %}{% else %}{% url 'remuneraciones:movimiento_lista' %}{% endif %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -7,7 +7,12 @@ from remuneraciones.models import (
     NOMBRE_MES,
     ConceptoRemuneracion,
     HoraExtra,
+    MovimientoRemuneracion,
     PeriodoRemuneracion,
+)
+from remuneraciones.services.movimientos import (
+    conceptos_carga_manual,
+    registrar_movimiento,
 )
 from rrhh.models import Trabajador
 
@@ -258,6 +263,169 @@ class HoraExtraCargaForm(HoraExtraForm):
 HoraExtraCargaRapidaFormSet = forms.modelformset_factory(
     HoraExtra,
     form=HoraExtraCargaForm,
+    extra=3,
+    can_delete=False,
+)
+
+
+class MovimientoForm(forms.ModelForm):
+    trabajador = forms.ModelChoiceField(
+        queryset=Trabajador.objects.none(),
+        widget=forms.Select(attrs={"class": "form-select"}),
+        required=True,
+    )
+    periodo = forms.ModelChoiceField(
+        queryset=PeriodoRemuneracion.objects.none(),
+        widget=forms.Select(attrs={"class": "form-select"}),
+        required=True,
+    )
+
+    class Meta:
+        model = MovimientoRemuneracion
+        fields = [
+            "concepto",
+            "cantidad",
+            "valor_unitario",
+            "monto",
+            "descripcion",
+        ]
+        widgets = {
+            "concepto": forms.Select(attrs={"class": "form-select"}),
+            "cantidad": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "step": "0.0001",
+                }
+            ),
+            "valor_unitario": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "step": "0.0001",
+                }
+            ),
+            "monto": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0.01",
+                    "step": "0.01",
+                }
+            ),
+            "descripcion": forms.Textarea(
+                attrs={"class": "form-control", "rows": 2}
+            ),
+        }
+
+    def __init__(self, *args, periodo=None, trabajador=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._periodo_fijo = periodo
+        self._trabajador_fijo = trabajador
+        if "cantidad" in self.fields:
+            self.fields["cantidad"].required = False
+        if "valor_unitario" in self.fields:
+            self.fields["valor_unitario"].required = False
+        if "descripcion" in self.fields:
+            self.fields["descripcion"].required = False
+        if "monto" in self.fields:
+            self.fields["monto"].help_text = (
+                "Valor absoluto. Haber o descuento lo define el concepto, "
+                "no un signo en este campo."
+            )
+
+        trabajadores = Trabajador.objects.filter(activo=True)
+        if self.instance.pk:
+            actual = self.instance.liquidacion.trabajador_id
+            trabajadores = Trabajador.objects.filter(
+                Q(pk=actual) | Q(activo=True)
+            )
+            self.fields["trabajador"].initial = actual
+            self.fields["periodo"].initial = self.instance.liquidacion.periodo_id
+        self.fields["trabajador"].queryset = trabajadores.order_by(
+            "nombre_completo"
+        )
+
+        periodos = PeriodoRemuneracion.objects.exclude(
+            estado=PeriodoRemuneracion.Estado.CERRADO
+        )
+        if self.instance.pk:
+            periodos = PeriodoRemuneracion.objects.filter(
+                Q(pk=self.instance.liquidacion.periodo_id)
+                | ~Q(estado=PeriodoRemuneracion.Estado.CERRADO)
+            )
+        self.fields["periodo"].queryset = periodos.order_by("-anio", "-mes")
+
+        conceptos = conceptos_carga_manual()
+        if self.instance.pk and self.instance.concepto_id:
+            conceptos = ConceptoRemuneracion.objects.filter(
+                Q(pk__in=conceptos.values("pk"))
+                | Q(pk=self.instance.concepto_id)
+            ).order_by("orden", "nombre")
+        self.fields["concepto"].queryset = conceptos
+
+        if periodo is not None and "periodo" in self.fields:
+            del self.fields["periodo"]
+        if trabajador is not None and "trabajador" in self.fields:
+            del self.fields["trabajador"]
+
+    def clean(self):
+        cleaned = super().clean()
+        trabajador = cleaned.get("trabajador") or self._trabajador_fijo
+        periodo = cleaned.get("periodo") or self._periodo_fijo
+        if self.instance.pk:
+            trabajador = trabajador or self.instance.liquidacion.trabajador
+            periodo = periodo or self.instance.liquidacion.periodo
+        if periodo and periodo.esta_cerrado:
+            raise ValidationError(
+                "El período está cerrado. No se pueden modificar movimientos."
+            )
+        if self.instance.pk and self.instance.bloqueado:
+            raise ValidationError(
+                "Este movimiento está bloqueado y no se puede editar."
+            )
+        cleaned["trabajador"] = trabajador
+        cleaned["periodo"] = periodo
+        return cleaned
+
+    def save(self, commit=True):
+        usuario = self.instance.actualizado_por or self.instance.creado_por
+        return registrar_movimiento(
+            trabajador=self.cleaned_data["trabajador"],
+            periodo=self.cleaned_data["periodo"],
+            concepto=self.cleaned_data["concepto"],
+            monto=self.cleaned_data.get("monto"),
+            cantidad=self.cleaned_data.get("cantidad"),
+            valor_unitario=self.cleaned_data.get("valor_unitario"),
+            descripcion=self.cleaned_data.get("descripcion") or "",
+            origen=MovimientoRemuneracion.Origen.MANUAL,
+            usuario=usuario,
+            instance=self.instance if self.instance.pk else None,
+        )
+
+
+class MovimientoCargaForm(MovimientoForm):
+    class Meta(MovimientoForm.Meta):
+        fields = ["concepto", "monto", "descripcion"]
+        widgets = {
+            "concepto": forms.Select(
+                attrs={"class": "form-select form-select-sm"}
+            ),
+            "monto": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "min": "0.01",
+                    "step": "0.01",
+                }
+            ),
+            "descripcion": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
+        }
+
+
+MovimientoCargaRapidaFormSet = forms.modelformset_factory(
+    MovimientoRemuneracion,
+    form=MovimientoCargaForm,
     extra=3,
     can_delete=False,
 )
