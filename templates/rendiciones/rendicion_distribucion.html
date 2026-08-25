@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static l10n %}
+{% block title %}Distribución — Rendición #{{ rendicion.pk }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Distribución — Rendición #{{ rendicion.pk }}</h1>
+    <p class="text-muted mb-0">
+      {{ rendicion.trabajador.nombre_completo }} ·
+      Total declarado:
+      <strong id="total-declarado" data-valor="{{ total_declarado|unlocalize }}">{{ total_declarado }}</strong>
+    </p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Volver a la ficha</a>
+</div>
+
+<p class="text-muted">
+  Varias líneas al mismo centro están permitidas (p. ej. materiales y combustible en EGC).
+  Los totales definitivos los calcula el servidor.
+</p>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" id="form-distribucion" novalidate>
+      {% csrf_token %}
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle" id="tabla-distribucion">
+          <thead>
+            <tr>
+              <th>Centro de costo</th>
+              <th>Descripción</th>
+              <th style="width: 8rem">Monto</th>
+              <th style="width: 5rem">Quitar</th>
+            </tr>
+          </thead>
+          <tbody id="filas-detalle">
+            {% for form in formset %}
+              <tr class="fila-detalle">
+                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td>
+                  {{ form.centro_costo }}
+                  {% if form.centro_costo.errors %}<div class="text-danger small">{{ form.centro_costo.errors }}</div>{% endif %}
+                  {% if form.non_field_errors %}<div class="text-danger small">{{ form.non_field_errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.descripcion }}
+                  {% if form.descripcion.errors %}<div class="text-danger small">{{ form.descripcion.errors }}</div>{% endif %}
+                </td>
+                <td>
+                  {{ form.monto }}
+                  {% if form.monto.errors %}<div class="text-danger small">{{ form.monto.errors }}</div>{% endif %}
+                </td>
+                <td class="text-center">
+                  {% if form.DELETE %}
+                    {{ form.DELETE.as_hidden }}
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-quitar" title="Quitar fila">×</button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <th colspan="2" class="text-end">Total distribuido (preliminar)</th>
+              <th class="text-end" id="suma-preliminar">0</th>
+              <th></th>
+            </tr>
+            <tr>
+              <th colspan="2" class="text-end">Diferencia (preliminar)</th>
+              <th class="text-end" id="diff-preliminar">0</th>
+              <th></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" id="btn-agregar-fila">Agregar fila</button>
+        <button class="btn btn-primary" type="submit">Guardar distribución</button>
+        <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<template id="plantilla-fila">
+  <tr class="fila-detalle">
+    {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <td>{{ formset.empty_form.centro_costo }}</td>
+    <td>{{ formset.empty_form.descripcion }}</td>
+    <td>{{ formset.empty_form.monto }}</td>
+    <td class="text-center">
+      {{ formset.empty_form.DELETE.as_hidden }}
+      <button type="button" class="btn btn-sm btn-outline-danger btn-quitar" title="Quitar fila">×</button>
+    </td>
+  </tr>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'rendiciones/js/distribucion.js' %}"></script>
+{% endblock %}

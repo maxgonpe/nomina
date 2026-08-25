@@ -26,6 +26,11 @@ urlpatterns = [
         name="rendicion_editar",
     ),
     path(
+        "<int:pk>/distribucion/",
+        views.RendicionDistribucionView.as_view(),
+        name="rendicion_distribucion",
+    ),
+    path(
         "<int:pk>/anular/",
         views.RendicionAnularView.as_view(),
         name="rendicion_anular",

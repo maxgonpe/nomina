@@ -1,8 +1,10 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.forms import BaseInlineFormSet, inlineformset_factory
 
-from rendiciones.models import Rendicion
+from core.models import CentroCosto
+from rendiciones.models import Rendicion, RendicionDetalle
 from rrhh.models import Trabajador
 
 
@@ -82,3 +84,86 @@ class RendicionForm(forms.ModelForm):
                 "Solo se puede cambiar a un trabajador activo."
             )
         return trabajador
+
+
+class RendicionDetalleForm(forms.ModelForm):
+    class Meta:
+        model = RendicionDetalle
+        fields = ["centro_costo", "descripcion", "monto"]
+        widgets = {
+            "centro_costo": forms.Select(
+                attrs={"class": "form-select form-select-sm"}
+            ),
+            "descripcion": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
+            "monto": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-sm monto-detalle",
+                    "min": "0.01",
+                    "step": "0.01",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.centro_costo_id:
+            qs = CentroCosto.objects.filter(
+                Q(activo=True) | Q(pk=self.instance.centro_costo_id)
+            )
+        else:
+            qs = CentroCosto.objects.filter(activo=True)
+        self.fields["centro_costo"].queryset = qs.order_by("codigo")
+        self.fields["centro_costo"].empty_label = "Centro…"
+        self.fields["descripcion"].required = False
+
+    def clean_monto(self):
+        monto = self.cleaned_data.get("monto")
+        if monto is None:
+            raise ValidationError("El monto es obligatorio.")
+        if monto <= 0:
+            raise ValidationError("El monto debe ser mayor que cero.")
+        return monto
+
+    def clean_centro_costo(self):
+        centro = self.cleaned_data.get("centro_costo")
+        if centro is None:
+            raise ValidationError("Debe indicar un centro de costo.")
+        if not self.instance.pk and not centro.activo:
+            raise ValidationError(
+                "Solo se pueden usar centros de costo activos."
+            )
+        if (
+            self.instance.pk
+            and centro.pk != self.instance.centro_costo_id
+            and not centro.activo
+        ):
+            raise ValidationError(
+                "Solo se puede cambiar a un centro de costo activo."
+            )
+        return centro
+
+
+class BaseRendicionDetalleFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        # Varias líneas al mismo CC están permitidas (REN002).
+
+
+def rendicion_detalle_formset_factory(extra=1):
+    return inlineformset_factory(
+        Rendicion,
+        RendicionDetalle,
+        form=RendicionDetalleForm,
+        formset=BaseRendicionDetalleFormSet,
+        extra=extra,
+        can_delete=True,
+        min_num=0,
+        validate_min=False,
+    )
+
+
+RendicionDetalleFormSet = rendicion_detalle_formset_factory(extra=1)

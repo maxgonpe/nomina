@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al cerrar **REN001** (registro de rendición).
+Punto de corte: **25 de agosto de 2026**, al cerrar **REN002** (distribución por centro de costo).
 
-Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001.
+Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN002.
 
 ## Dónde estamos
 
@@ -19,9 +19,9 @@ Orden ejecutado: `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 �
 
 | Ítem | Estado |
 |------|--------|
-| REN001 Registro de rendición | **Hecho** |
-| REN002 Distribución por centro de costo | **Siguiente** |
-| REN003 Validación y cuadratura | Pendiente |
+| REN001 Registro de rendición | Hecho |
+| REN002 Distribución por centro de costo | **Hecho** |
+| REN003 Validación y cuadratura | **Siguiente** |
 | REN004 Documentos y respaldos | Pendiente |
 | REN005 Flujo de aprobación | Pendiente |
 | REN006 Consultas, filtros y reportes | Pendiente |
@@ -45,6 +45,15 @@ Modelos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`
 - Filtros listado: trabajador, estado; ficha muestra totales de cuadratura (aún sin detalles)
 - Servicio: `rendiciones/services/rendiciones.py` (`anular`, `puede_editar`)
 - Tests: `rendiciones/tests.py` — **12 OK**
+
+### REN002 — Distribución por centro de costo (hecho)
+
+- UI: ficha muestra tabla de líneas; edición en `/rendiciones/<pk>/distribucion/`
+- `RendicionDetalleForm` + `RendicionDetalleFormSet` (inline; varias líneas al mismo CC OK)
+- Servicio: `guardar_distribucion()`, `agregar_detalle()`, `total_distribuido` / `diferencia`
+- Solo editable en BORRADOR; CC activo en altas; histórico conserva CC inactivo
+- JS preliminar: `static/rendiciones/js/distribucion.js` (suma/diferencia; servidor manda)
+- Tests: `rendiciones/test_distribucion.py` — **10 OK** (suite rendiciones **22 OK**)
 
 ## Qué quedó construido (Bloque 1 — no rehacer)
 
@@ -106,11 +115,10 @@ python manage.py runserver 127.0.0.1:8000
 ```
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
-- Primera tarea: **REN002 — Distribución por centro de costo**
-  1. Leer `otros/mini-especificaciones/REN/REN002 — Distribución por centro de costo.docx`
-  2. Reutilizar `RendicionDetalle` → `CentroCosto` (sin columnas fijas)
-  3. Formset de detalles + totales en ficha; tests de aceptación
-  4. Al cerrar: actualizar esta tabla (REN002 → Hecho) y el skill
+- Primera tarea: **REN003 — Validación y cuadratura**
+  1. Leer `otros/mini-especificaciones/REN/REN003 — Validación y cuadratura.docx`
+  2. `validar_cuadratura()` Decimal exacto; gate a PRESENTADA
+  3. Tests de aceptación; actualizar esta tabla y el skill
 
 ## Roadmap de bloques (sistema completo)
 

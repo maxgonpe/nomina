@@ -17,10 +17,10 @@ Lee en este orden, sin rehacer lo ya cerrado:
 5. La mini-especificación del siguiente ítem en otros/mini-especificaciones/REN/
    (docx; PDF en otros/pdf/ son respaldo — algunos exportan casi vacíos)
 
-Siguiente tarea: REN002 — Distribución por centro de costo (Bloque 2).
-Django es la fuente oficial. Reutilizar RendicionDetalle + CentroCosto.
-UI en español (Chile). Bloque 1 y REN001 cerrados — no rehacerlos.
-Orden Bloque 2: REN001 ✓ → 002 → 003 → 004 → 005 → 006 → 007.
+Siguiente tarea: REN003 — Validación y cuadratura (Bloque 2).
+Django es la fuente oficial. Reutilizar total_distribuido / diferencia / cuadra.
+UI en español (Chile). Bloque 1, REN001 y REN002 cerrados — no rehacerlos.
+Orden Bloque 2: REN001 ✓ → 002 ✓ → 003 → 004 → 005 → 006 → 007.
 ```
 
 ---
@@ -123,7 +123,7 @@ cd /home/maxgonpe/nomina
 source .env/bin/activate
 python manage.py runserver 127.0.0.1:8000
 python manage.py test rrhh core remuneraciones   # 120 OK al cerrar Bloque 1
-python manage.py test rendiciones                # 12 OK al cerrar REN001
+python manage.py test rendiciones                # 22 OK al cerrar REN002
 ```
 
 Login: `/cuentas/login/`. Hay un superusuario de prueba `admin`/`admin`; el usuario también creó el suyo. No depender de esa clave.
@@ -149,14 +149,15 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 ## Estado al corte (25 ago 2026)
 
-**Cerrado:** infra + **Bloque 1** + **REN001**.  
-**Siguiente:** **REN002 — Distribución por centro de costo**.
+**Cerrado:** infra + **Bloque 1** + **REN001–REN002**.  
+**Siguiente:** **REN003 — Validación y cuadratura**.
 
 | ID | Qué | Estado |
 |----|-----|--------|
 | REM001–010 | Remuneraciones completas | Hecho |
 | REN001 | Registro cabecera rendición | Hecho — `/rendiciones/` |
-| REN002 | Distribución por CC | **Siguiente** |
+| REN002 | Distribución por CC | Hecho — `/rendiciones/<pk>/distribucion/` |
+| REN003 | Cuadratura | **Siguiente** |
 | REN003 | Cuadratura | Pendiente |
 | REN004 | Documentos / respaldos | Pendiente |
 | REN005 | Flujo de estados | Pendiente |
@@ -178,7 +179,7 @@ Migraciones Bloque 1: `rrhh` 0002, `core` 0002, `remuneraciones` 0007.
 ## Qué sigue (Bloque 2 en detalle)
 
 1. **REN001** ✓ — CRUD cabecera; BORRADOR; anular borrador; 12 tests OK.
-2. **REN002** — Formset de detalles; N líneas por CC; `total_distribuido`.
+2. **REN002** ✓ — Formset de detalles; N líneas por CC; totales en ficha; 10 tests OK.
 3. **REN003** — `validar_cuadratura()`; gate a PRESENTADA.
 4. **REN004** — Uploads a media; tipos PDF/JPG/PNG.
 5. **REN005** — Transiciones + permisos; motivo en rechazo/anulación.

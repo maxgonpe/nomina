@@ -75,7 +75,7 @@ rendiciones/
 | ID | Listo cuando |
 |----|----------------|
 | REN001 | ✓ Crear/editar/listar/consultar/anular borrador |
-| REN002 | Distribuir en N centros (varias líneas al mismo CC OK) |
+| REN002 | ✓ Distribuir en N centros (varias líneas al mismo CC OK) |
 | REN003 | Solo cuadrada puede presentarse |
 | REN004 | Múltiples respaldos trazables en media |
 | REN005 | Ninguna transición salta el flujo |

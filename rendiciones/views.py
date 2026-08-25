@@ -15,9 +15,13 @@ from django.views.generic import (
 )
 
 from core.mixins import AuditFormMixin
-from rendiciones.forms import RendicionForm
+from rendiciones.forms import RendicionDetalleFormSet, RendicionForm
 from rendiciones.models import Rendicion
-from rendiciones.services.rendiciones import anular, puede_editar
+from rendiciones.services.rendiciones import (
+    anular,
+    guardar_distribucion,
+    puede_editar,
+)
 from rrhh.models import Trabajador
 
 
@@ -86,17 +90,85 @@ class RendicionDetailView(
     context_object_name = "rendicion"
 
     def get_queryset(self):
-        return super().get_queryset().select_related(
-            "trabajador",
-            "creado_por",
-            "actualizado_por",
+        return (
+            super()
+            .get_queryset()
+            .select_related(
+                "trabajador",
+                "creado_por",
+                "actualizado_por",
+            )
+            .prefetch_related("detalles__centro_costo")
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["puede_editar"] = puede_editar(self.object)
         context["puede_anular"] = self.object.estado == Rendicion.Estado.BORRADOR
+        context["detalles"] = self.object.detalles.select_related("centro_costo")
         return context
+
+
+class RendicionDistribucionView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "rendiciones.change_rendicion"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=kwargs["pk"],
+        )
+        if not puede_editar(self.rendicion):
+            messages.error(
+                request,
+                "Solo se puede distribuir una rendición en borrador.",
+            )
+            return redirect(
+                "rendiciones:rendicion_detalle",
+                pk=self.rendicion.pk,
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def _formset(self, data=None):
+        return RendicionDetalleFormSet(
+            data=data,
+            instance=self.rendicion,
+            queryset=self.rendicion.detalles.select_related("centro_costo"),
+            prefix="det",
+        )
+
+    def get(self, request, pk):
+        return self._render(self._formset())
+
+    def post(self, request, pk):
+        formset = self._formset(data=request.POST)
+        try:
+            guardar_distribucion(
+                self.rendicion,
+                formset,
+                usuario=request.user,
+            )
+        except ValidationError as exc:
+            if formset.errors or formset.non_form_errors():
+                return self._render(formset)
+            messages.error(request, "; ".join(exc.messages))
+            return self._render(formset)
+        messages.success(request, "Distribución guardada.")
+        return redirect("rendiciones:rendicion_detalle", pk=self.rendicion.pk)
+
+    def _render(self, formset):
+        return render(
+            request=self.request,
+            template_name="rendiciones/rendicion_distribucion.html",
+            context={
+                "rendicion": self.rendicion,
+                "formset": formset,
+                "total_declarado": self.rendicion.total_declarado,
+            },
+        )
 
 
 class RendicionUpdateView(

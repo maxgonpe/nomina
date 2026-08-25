@@ -9,6 +9,7 @@
   <div class="btn-group">
     {% if puede_editar and perms.rendiciones.change_rendicion %}
       <a class="btn btn-outline-primary" href="{% url 'rendiciones:rendicion_editar' rendicion.pk %}">Editar</a>
+      <a class="btn btn-outline-primary" href="{% url 'rendiciones:rendicion_distribucion' rendicion.pk %}">Distribuir</a>
     {% endif %}
     {% if puede_anular and perms.rendiciones.change_rendicion %}
       <a class="btn btn-outline-danger" href="{% url 'rendiciones:rendicion_anular' rendicion.pk %}">Anular</a>
@@ -17,6 +18,7 @@
 </div>
 
 <div class="card shadow-sm mb-4">
+  <div class="card-header">Datos generales</div>
   <div class="card-body">
     <dl class="row mb-0">
       <dt class="col-sm-3">Trabajador</dt>
@@ -49,23 +51,55 @@
 </div>
 
 <div class="card shadow-sm mb-4">
-  <div class="card-header">Cuadratura (REN002 / REN003)</div>
-  <div class="card-body">
-    <dl class="row mb-0">
-      <dt class="col-sm-3">Total distribuido</dt>
-      <dd class="col-sm-9">{{ rendicion.total_distribuido }}</dd>
-      <dt class="col-sm-3">Diferencia</dt>
-      <dd class="col-sm-9">{{ rendicion.diferencia }}</dd>
-      <dt class="col-sm-3">¿Cuadra?</dt>
-      <dd class="col-sm-9">
-        {% if rendicion.cuadra %}
-          <span class="badge text-bg-success">Sí</span>
-        {% else %}
-          <span class="badge text-bg-warning">No</span>
-          <span class="text-muted small">La distribución por centro de costo se carga en REN002.</span>
-        {% endif %}
-      </dd>
-    </dl>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Distribución por centro de costo</span>
+    {% if puede_editar and perms.rendiciones.change_rendicion %}
+      <a class="btn btn-sm btn-primary" href="{% url 'rendiciones:rendicion_distribucion' rendicion.pk %}">Editar distribución</a>
+    {% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Centro</th>
+          <th>Descripción</th>
+          <th class="text-end">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in detalles %}
+          <tr>
+            <td><code>{{ d.centro_costo.codigo }}</code> {{ d.centro_costo.nombre }}</td>
+            <td>{{ d.descripcion|default:"—" }}</td>
+            <td class="text-end">{{ d.monto }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3" class="text-muted">Aún no hay líneas de distribución.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light">
+        <tr>
+          <th colspan="2" class="text-end">Total distribuido</th>
+          <th class="text-end">{{ rendicion.total_distribuido }}</th>
+        </tr>
+        <tr>
+          <th colspan="2" class="text-end">Diferencia</th>
+          <th class="text-end">{{ rendicion.diferencia }}</th>
+        </tr>
+        <tr>
+          <th colspan="2" class="text-end">¿Cuadra?</th>
+          <th class="text-end">
+            {% if rendicion.cuadra %}
+              <span class="badge text-bg-success">Sí</span>
+            {% else %}
+              <span class="badge text-bg-warning">No</span>
+            {% endif %}
+          </th>
+        </tr>
+      </tfoot>
+    </table>
   </div>
 </div>
 
