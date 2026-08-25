@@ -3,60 +3,528 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>{% block title %}Nómina{% endblock %} — Sistemas Hídricos</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
 </head>
+
 <body class="bg-light">
+
+  <!-- =========================================================
+       BARRA DE NAVEGACIÓN
+       ========================================================= -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+
     <div class="container">
-      <a class="navbar-brand" href="{% url 'rrhh:trabajador_lista' %}">Nómina</a>
-      <div class="navbar-nav me-auto">
+
+      <!-- MARCA / INICIO -->
+      <a
+        class="navbar-brand fw-semibold"
+        href="{% url 'rrhh:trabajador_lista' %}"
+      >
+        Nómina
+      </a>
+
+
+      <!-- BOTÓN RESPONSIVE PARA PANTALLAS PEQUEÑAS -->
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNomina"
+        aria-controls="navbarNomina"
+        aria-expanded="false"
+        aria-label="Mostrar navegación"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+
+      <!-- CONTENIDO DEL NAVBAR -->
+      <div
+        class="collapse navbar-collapse"
+        id="navbarNomina"
+      >
+
         {% if user.is_authenticated %}
-          <a class="nav-link" href="{% url 'rrhh:trabajador_lista' %}">Trabajadores</a>
-          <a class="nav-link" href="{% url 'rrhh:cargo_lista' %}">Cargos</a>
-          <a class="nav-link" href="{% url 'rrhh:contrato_lista' %}">Contratos</a>
-          <a class="nav-link" href="{% url 'remuneraciones:periodo_lista' %}">Períodos</a>
-          <a class="nav-link" href="{% url 'remuneraciones:hora_extra_lista' %}">Horas extra</a>
-          <a class="nav-link" href="{% url 'remuneraciones:movimiento_lista' %}">Movimientos</a>
-          <a class="nav-link" href="{% url 'remuneraciones:finiquito_lista' %}">Finiquitos</a>
-          <a class="nav-link" href="{% url 'remuneraciones:liquidacion_lista' %}">Liquidaciones</a>
-          <a class="nav-link" href="{% url 'remuneraciones:costo_lista' %}">Costos</a>
-          <a class="nav-link" href="{% url 'remuneraciones:resumen_anual_actual' %}">Resumen</a>
-          <a class="nav-link" href="{% url 'remuneraciones:concepto_lista' %}">Conceptos</a>
-          <a class="nav-link" href="{% url 'rendiciones:rendicion_lista' %}">Rendiciones</a>
-          <a class="nav-link" href="{% url 'rendiciones:rendicion_resumen' %}">Resumen REN</a>
-          <a class="nav-link" href="{% url 'core:parametro_lista' %}">Parámetros</a>
-          {% if user.is_staff %}
-            <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
-          {% endif %}
-        {% endif %}
-      </div>
-      <div class="navbar-nav">
-        {% if user.is_authenticated %}
-          <span class="navbar-text me-3">{{ user.username }}</span>
-          <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="btn btn-outline-light btn-sm" type="submit">Salir</button>
-          </form>
+
+          <!-- =================================================
+               MENÚ PRINCIPAL
+               ================================================= -->
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+
+            <!-- =============================================
+                 CORE
+                 ============================================= -->
+            <li class="nav-item dropdown">
+
+              <a
+                class="nav-link dropdown-toggle border-bottom border-3 border-warning"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Core
+              </a>
+
+              <ul class="dropdown-menu">
+
+                <li>
+                  <h6 class="dropdown-header">
+                    Configuración
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'core:parametro_lista' %}"
+                  >
+                    Parámetros
+                  </a>
+                </li>
+
+              </ul>
+
+            </li>
+
+
+            <!-- =============================================
+                 RRHH
+                 ============================================= -->
+            <li class="nav-item dropdown">
+
+              <a
+                class="nav-link dropdown-toggle border-bottom border-3 border-info"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                RRHH
+              </a>
+
+              <ul class="dropdown-menu">
+
+                <li>
+                  <h6 class="dropdown-header">
+                    Personal
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'rrhh:trabajador_lista' %}"
+                  >
+                    Trabajadores
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'rrhh:cargo_lista' %}"
+                  >
+                    Cargos
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'rrhh:contrato_lista' %}"
+                  >
+                    Contratos
+                  </a>
+                </li>
+
+              </ul>
+
+            </li>
+
+
+            <!-- =============================================
+                 REMUNERACIONES
+                 ============================================= -->
+            <li class="nav-item dropdown">
+
+              <a
+                class="nav-link dropdown-toggle border-bottom border-3 border-success"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Remuneraciones
+              </a>
+
+              <ul class="dropdown-menu">
+
+                <!-- PROCESO -->
+                <li>
+                  <h6 class="dropdown-header">
+                    Proceso mensual
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:periodo_lista' %}"
+                  >
+                    Períodos
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:hora_extra_lista' %}"
+                  >
+                    Horas extra
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:movimiento_lista' %}"
+                  >
+                    Movimientos
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:finiquito_lista' %}"
+                  >
+                    Finiquitos
+                  </a>
+                </li>
+
+
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+
+
+                <!-- RESULTADOS -->
+                <li>
+                  <h6 class="dropdown-header">
+                    Resultados
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:liquidacion_lista' %}"
+                  >
+                    Liquidaciones
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:costo_lista' %}"
+                  >
+                    Costos
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:resumen_anual_actual' %}"
+                  >
+                    Resumen anual
+                  </a>
+                </li>
+
+
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+
+
+                <!-- CONFIGURACIÓN -->
+                <li>
+                  <h6 class="dropdown-header">
+                    Configuración
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'remuneraciones:concepto_lista' %}"
+                  >
+                    Conceptos
+                  </a>
+                </li>
+
+              </ul>
+
+            </li>
+
+
+            <!-- =============================================
+                 RENDICIONES
+                 ============================================= -->
+            <li class="nav-item dropdown">
+
+              <a
+                class="nav-link dropdown-toggle border-bottom border-3 border-primary"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Rendiciones
+              </a>
+
+              <ul class="dropdown-menu">
+
+                <li>
+                  <h6 class="dropdown-header">
+                    Gestión
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'rendiciones:rendicion_lista' %}"
+                  >
+                    Rendiciones
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'rendiciones:rendicion_resumen' %}"
+                  >
+                    Resumen
+                  </a>
+                </li>
+
+              </ul>
+
+            </li>
+
+
+            <!-- =============================================
+                 FACTURACIÓN
+                 ACTIVAR CUANDO LAS URLs EXISTAN
+                 ============================================= -->
+
+            {#
+            <li class="nav-item dropdown">
+
+              <a
+                class="nav-link dropdown-toggle border-bottom border-3 border-danger"
+                href="#"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Facturación
+              </a>
+
+              <ul class="dropdown-menu">
+
+                <li>
+                  <h6 class="dropdown-header">
+                    Maestros
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="" # url 'facturacion:cliente_lista' 
+                  >
+                    Clientes
+                  </a>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="" # url 'facturacion:obra_lista' 
+                  >
+                    Obras
+                  </a>
+                </li>
+
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+
+                <li>
+                  <h6 class="dropdown-header">
+                    Documentos
+                  </h6>
+                </li>
+
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="" # url 'facturacion:documento_lista' 
+                  >
+                    Documentos tributarios
+                  </a>
+                </li>
+
+              </ul>
+
+            </li>
+            #}
+
+
+            <!-- =============================================
+                 FUTUROS MÓDULOS
+
+                 Se pueden agregar después con el mismo patrón:
+
+                 Impuestos
+                 Finanzas
+                 Contabilidad
+                 Integración Excel
+                 ============================================= -->
+
+          </ul>
+
+
+          <!-- =================================================
+               USUARIO / ADMIN / SALIR
+               ================================================= -->
+          <ul class="navbar-nav ms-auto align-items-lg-center">
+
+            {% if user.is_staff %}
+              <li class="nav-item">
+                <a
+                  class="nav-link"
+                  href="{% url 'admin:index' %}"
+                >
+                  Admin
+                </a>
+              </li>
+            {% endif %}
+
+
+            <li class="nav-item">
+              <span class="navbar-text mx-lg-3">
+                {{ user.username }}
+              </span>
+            </li>
+
+
+            <li class="nav-item">
+              <form
+                method="post"
+                action="{% url 'logout' %}"
+                class="d-inline"
+              >
+                {% csrf_token %}
+
+                <button
+                  class="btn btn-outline-light btn-sm"
+                  type="submit"
+                >
+                  Salir
+                </button>
+
+              </form>
+            </li>
+
+          </ul>
+
+
         {% else %}
-          <a class="nav-link" href="{% url 'login' %}">Ingresar</a>
+
+          <!-- =================================================
+               USUARIO NO AUTENTICADO
+               ================================================= -->
+          <ul class="navbar-nav ms-auto">
+
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="{% url 'login' %}"
+              >
+                Ingresar
+              </a>
+            </li>
+
+          </ul>
+
         {% endif %}
+
       </div>
+
     </div>
+
   </nav>
 
+
+  <!-- =========================================================
+       CONTENIDO PRINCIPAL
+       ========================================================= -->
   <main class="container mb-5">
+
     {% if messages %}
+
       {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+
+        <div
+          class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+          role="alert"
+        >
+
           {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Cerrar"
+          ></button>
+
         </div>
+
       {% endfor %}
+
     {% endif %}
-    {% block content %}{% endblock %}
+
+
+    {% block content %}
+    {% endblock %}
+
   </main>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  {% block scripts %}{% endblock %}
+
+
+  <!-- =========================================================
+       BOOTSTRAP JS
+       El bundle incluye Popper, requerido por los dropdowns
+       ========================================================= -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+  </script>
+
+
+  {% block scripts %}
+  {% endblock %}
+
 </body>
 </html>
