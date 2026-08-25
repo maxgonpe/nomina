@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Anular pago{% endblock %}
+{% block content %}
+<div class="mb-3">
+  <a class="btn btn-outline-secondary btn-sm" href="{{ liquidacion.get_absolute_url }}">Volver a la liquidación</a>
+</div>
+
+<h1 class="h3 mb-3">Anular pago</h1>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Trabajador</dt>
+      <dd class="col-sm-9">{{ liquidacion.trabajador.nombre_completo }}</dd>
+      <dt class="col-sm-3">Período</dt>
+      <dd class="col-sm-9">{{ liquidacion.periodo.nombre }}</dd>
+      <dt class="col-sm-3">Fecha del pago</dt>
+      <dd class="col-sm-9">{{ pago.fecha|date:"d-m-Y" }}</dd>
+      <dt class="col-sm-3">Monto</dt>
+      <dd class="col-sm-9">{{ pago.monto }}</dd>
+      <dt class="col-sm-3">Medio</dt>
+      <dd class="col-sm-9">{{ pago.get_medio_pago_display }}</dd>
+      <dt class="col-sm-3">Referencia</dt>
+      <dd class="col-sm-9">{{ pago.referencia|default:"—" }}</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header">Confirmar anulación</div>
+  <div class="card-body">
+    <p class="text-muted">
+      El pago no se elimina; quedará registrado como anulado y dejará de sumar en el total pagado.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.motivo.id_for_label }}">{{ form.motivo.label }}</label>
+        {{ form.motivo }}
+        {{ form.motivo.errors }}
+      </div>
+      <button class="btn btn-danger" type="submit">Anular pago</button>
+      <a class="btn btn-outline-secondary" href="{{ liquidacion.get_absolute_url }}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

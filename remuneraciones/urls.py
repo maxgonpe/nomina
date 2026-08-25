@@ -236,6 +236,11 @@ urlpatterns = [
         name="liquidacion_pago",
     ),
     path(
+        "pagos/<int:pk>/anular/",
+        views.PagoRemuneracionAnularView.as_view(),
+        name="pago_anular",
+    ),
+    path(
         "periodos/<int:periodo_id>/liquidaciones/",
         views.LiquidacionListView.as_view(),
         name="periodo_liquidaciones",

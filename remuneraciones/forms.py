@@ -603,10 +603,38 @@ class PagoRemuneracionForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, liquidacion=None, **kwargs):
+        self.liquidacion = liquidacion
         super().__init__(*args, **kwargs)
         self.fields["fecha"].input_formats = ["%Y-%m-%d"]
         self.fields["referencia"].required = False
         self.fields["observaciones"].required = False
         if not self.instance.pk:
             self.fields["fecha"].initial = timezone.localdate()
+
+    def clean_monto(self):
+        monto = self.cleaned_data.get("monto")
+        if monto is None or self.liquidacion is None:
+            return monto
+        if monto <= 0:
+            raise ValidationError("El monto del pago debe ser mayor que 0.")
+        saldo = self.liquidacion.saldo_pendiente
+        if monto > saldo:
+            exceso = monto - saldo
+            raise ValidationError(
+                f"El monto excede el saldo pendiente en ${exceso:,.2f}."
+            )
+        return monto
+
+
+class PagoRemuneracionAnularForm(forms.Form):
+    motivo = forms.CharField(
+        label="Motivo de anulación",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+
+    def clean_motivo(self):
+        motivo = (self.cleaned_data.get("motivo") or "").strip()
+        if not motivo:
+            raise ValidationError("Debe indicar el motivo de anulación.")
+        return motivo

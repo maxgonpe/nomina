@@ -11,7 +11,6 @@ from remuneraciones.models import (
     HoraExtra,
     LiquidacionMensual,
     MovimientoRemuneracion,
-    PagoRemuneracion,
     PeriodoRemuneracion,
 )
 from remuneraciones.services.finiquitos import (
@@ -282,7 +281,7 @@ def anular(liquidacion, usuario=None):
 
 
 def marcar_pagada(liquidacion, usuario=None):
-    """PAGADA solo si existe PagoRemuneracion; no por un total copiado de Excel."""
+    """PAGADA solo cuando total_pagado vigente iguala total_a_pagar."""
     liquidacion.periodo.assert_editable()
     if liquidacion.estado != LiquidacionMensual.Estado.VALIDADA:
         raise ValidationError("Solo se marca pagada una liquidación validada.")
@@ -291,6 +290,13 @@ def marcar_pagada(liquidacion, usuario=None):
             "Debe registrar al menos un pago antes de marcar la liquidación "
             "como pagada."
         )
+    if liquidacion.saldo_pendiente != Decimal("0.00"):
+        raise ValidationError(
+            "La liquidación tiene saldo pendiente. "
+            f"Pagado: {_format_saldo(liquidacion.total_pagado)} · "
+            f"Total a pagar: {_format_saldo(liquidacion.total_a_pagar)} · "
+            f"Saldo: {_format_saldo(liquidacion.saldo_pendiente)}."
+        )
     liquidacion.estado = LiquidacionMensual.Estado.PAGADA
     if usuario is not None:
         liquidacion.actualizado_por = usuario
@@ -298,39 +304,11 @@ def marcar_pagada(liquidacion, usuario=None):
     return liquidacion
 
 
-def registrar_pago(
-    liquidacion,
-    *,
-    fecha,
-    monto,
-    medio_pago=PagoRemuneracion.MedioPago.TRANSFERENCIA,
-    referencia="",
-    observaciones="",
-    usuario=None,
-):
-    liquidacion.periodo.assert_editable()
-    if liquidacion.estado in (
-        LiquidacionMensual.Estado.ANULADA,
-        LiquidacionMensual.Estado.CERRADA,
-        LiquidacionMensual.Estado.BORRADOR,
-    ):
-        raise ValidationError(
-            "No se registran pagos en una liquidación "
-            f"{liquidacion.get_estado_display().lower()}."
-        )
-    pago = PagoRemuneracion(
-        liquidacion=liquidacion,
-        fecha=fecha,
-        monto=dinero(monto),
-        medio_pago=medio_pago,
-        referencia=referencia or "",
-        observaciones=observaciones or "",
-        creado_por=usuario,
-        actualizado_por=usuario,
-    )
-    pago.full_clean()
-    pago.save()
-    return pago
+def _format_saldo(valor):
+    monto = dinero(valor)
+    entero, frac = f"{monto:.2f}".split(".")
+    miles = "{:,}".format(int(entero)).replace(",", ".")
+    return f"${miles},{frac}"
 
 
 def acciones_disponibles(liquidacion):
@@ -353,6 +331,8 @@ def acciones_disponibles(liquidacion):
         "pagar": (
             not cerrado
             and liquidacion.estado == LiquidacionMensual.Estado.VALIDADA
+            and liquidacion.total_pagado > 0
+            and liquidacion.saldo_pendiente == Decimal("0.00")
         ),
         "anular": (
             not cerrado
@@ -364,11 +344,11 @@ def acciones_disponibles(liquidacion):
         ),
         "pago": (
             not cerrado
+            and liquidacion.saldo_pendiente > 0
             and liquidacion.estado
             in (
                 LiquidacionMensual.Estado.CALCULADA,
                 LiquidacionMensual.Estado.VALIDADA,
-                LiquidacionMensual.Estado.PAGADA,
             )
         ),
     }

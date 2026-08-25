@@ -89,8 +89,8 @@ class HoraExtraAdmin(admin.ModelAdmin):
 
 @admin.register(PagoRemuneracion)
 class PagoRemuneracionAdmin(admin.ModelAdmin):
-    list_display = ("liquidacion", "fecha", "monto", "medio_pago")
-    list_filter = ("medio_pago",)
+    list_display = ("liquidacion", "fecha", "monto", "medio_pago", "anulado")
+    list_filter = ("medio_pago", "anulado")
 
 
 @admin.register(Finiquito)

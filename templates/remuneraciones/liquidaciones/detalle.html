@@ -217,11 +217,13 @@
       <dd class="col-sm-9">{{ liquidacion.total_pagado }}</dd>
       <dt class="col-sm-3">Saldo</dt>
       <dd class="col-sm-9">{{ liquidacion.saldo_pendiente }}</dd>
+      <dt class="col-sm-3">Estado de pago</dt>
+      <dd class="col-sm-9">{{ liquidacion.estado_pago }}</dd>
     </dl>
   </div>
 </div>
 
-<h2 class="h5">Pagos</h2>
+<h2 class="h5">Pagos registrados</h2>
 <div class="card shadow-sm mb-4">
   <div class="table-responsive">
     <table class="table mb-0">
@@ -231,18 +233,38 @@
           <th>Medio</th>
           <th>Referencia</th>
           <th class="text-end">Monto</th>
+          <th>Estado</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for pago in pagos %}
-          <tr>
+          <tr class="{% if pago.anulado %}table-secondary{% endif %}">
             <td>{{ pago.fecha|date:"d-m-Y" }}</td>
             <td>{{ pago.get_medio_pago_display }}</td>
             <td>{{ pago.referencia|default:"—" }}</td>
             <td class="text-end">{{ pago.monto }}</td>
+            <td>
+              {% if pago.anulado %}
+                <span class="badge text-bg-secondary">ANULADO</span>
+              {% else %}
+                <span class="badge text-bg-success">VIGENTE</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if pago.anulado %}
+                <div class="small text-muted text-start">
+                  {% if pago.anulado_por %}Anulado por: {{ pago.anulado_por }}<br>{% endif %}
+                  {% if pago.anulado_en %}Fecha: {{ pago.anulado_en|date:"d-m-Y H:i" }}<br>{% endif %}
+                  Motivo: {{ pago.motivo_anulacion }}
+                </div>
+              {% elif perms.remuneraciones.anular_pagoremuneracion and not liquidacion.periodo.esta_cerrado %}
+                <a class="btn btn-outline-danger btn-sm" href="{% url 'remuneraciones:pago_anular' pago.pk %}">Anular</a>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="text-muted">Sin pagos. PAGADA solo se marca si hay al menos un pago registrado.</td></tr>
+          <tr><td colspan="6" class="text-muted">Sin pagos registrados.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -253,6 +275,7 @@
 <div class="card shadow-sm mb-4">
   <div class="card-header">Registrar pago</div>
   <div class="card-body">
+    <p class="text-muted mb-3">Saldo pendiente: <strong>{{ liquidacion.saldo_pendiente }}</strong></p>
     <form method="post" action="{% url 'remuneraciones:liquidacion_pago' liquidacion.pk %}">
       {% csrf_token %}
       {{ pago_form.non_field_errors }}

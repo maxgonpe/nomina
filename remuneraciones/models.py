@@ -420,7 +420,7 @@ class LiquidacionMensual(AuditModel):
 
     @property
     def total_pagado(self):
-        total = self.pagos.aggregate(
+        total = self.pagos.filter(anulado=False).aggregate(
             total=Sum("monto")
         )["total"]
 
@@ -432,6 +432,15 @@ class LiquidacionMensual(AuditModel):
             self.total_a_pagar
             - self.total_pagado
         )
+
+    @property
+    def estado_pago(self):
+        pagado = self.total_pagado
+        if pagado <= 0:
+            return "SIN PAGO"
+        if pagado >= self.total_a_pagar:
+            return "PAGADA"
+        return "PAGO PARCIAL"
 
     def __str__(self):
         return (
@@ -758,8 +767,29 @@ class PagoRemuneracion(AuditModel):
         blank=True,
     )
 
+    anulado = models.BooleanField(
+        default=False,
+    )
+
+    anulado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    anulado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pagos_remuneracion_anulados",
+    )
+
+    motivo_anulacion = models.TextField(
+        blank=True,
+    )
+
     class Meta:
-        ordering = ["-fecha"]
+        ordering = ["-fecha", "-pk"]
 
         constraints = [
             models.CheckConstraint(
@@ -767,6 +797,21 @@ class PagoRemuneracion(AuditModel):
                 name="ck_pago_remuneracion_monto",
             ),
         ]
+
+        permissions = [
+            (
+                "anular_pagoremuneracion",
+                "Puede anular pagos de remuneración",
+            ),
+        ]
+
+    @property
+    def esta_vigente(self):
+        return not self.anulado
+
+    @property
+    def estado_display(self):
+        return "ANULADO" if self.anulado else "VIGENTE"
 
     def __str__(self):
         return (

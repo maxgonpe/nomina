@@ -28,6 +28,7 @@ from remuneraciones.forms import (
     HoraExtraForm,
     MovimientoCargaRapidaFormSet,
     MovimientoForm,
+    PagoRemuneracionAnularForm,
     PagoRemuneracionForm,
     PeriodoForm,
     ReaperturaPeriodoForm,
@@ -39,6 +40,7 @@ from remuneraciones.models import (
     HoraExtra,
     LiquidacionMensual,
     MovimientoRemuneracion,
+    PagoRemuneracion,
     PeriodoRemuneracion,
 )
 from remuneraciones.services.costos import (
@@ -63,9 +65,9 @@ from remuneraciones.services.liquidaciones import (
     calcular as calcular_liquidacion,
     calcular_periodo,
     marcar_pagada,
-    registrar_pago,
     validar as validar_liquidacion,
 )
+from remuneraciones.services.pagos import anular_pago, registrar_pago
 from remuneraciones.services.movimientos import (
     eliminar_movimiento,
     suma_movimientos,
@@ -1265,8 +1267,9 @@ def _contexto_liquidacion(liquidacion, *, pago_form=None, dias_form=None):
         "acciones": acciones_liquidacion(liquidacion),
         "haberes": haberes,
         "descuentos": descuentos,
-        "pagos": liquidacion.pagos.all(),
-        "pago_form": pago_form or PagoRemuneracionForm(),
+        "pagos": liquidacion.pagos.select_related("anulado_por").all(),
+        "pago_form": pago_form
+        or PagoRemuneracionForm(liquidacion=liquidacion),
         "dias_form": dias_form
         or DiasFalladosForm(
             initial={"dias_fallados": liquidacion.dias_fallados}
@@ -1443,7 +1446,7 @@ class LiquidacionPagoView(
             ),
             pk=pk,
         )
-        form = PagoRemuneracionForm(request.POST)
+        form = PagoRemuneracionForm(request.POST, liquidacion=liquidacion)
         if not form.is_valid():
             messages.error(request, "Revise los datos del pago.")
             return render(
@@ -1465,6 +1468,76 @@ class LiquidacionPagoView(
         except ValidationError as exc:
             messages.error(request, _mensaje_error(exc))
         return redirect("remuneraciones:liquidacion_detalle", pk=pk)
+
+
+class PagoRemuneracionAnularView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.anular_pagoremuneracion"
+    http_method_names = ["get", "post"]
+
+    def _pago(self, pk):
+        return get_object_or_404(
+            PagoRemuneracion.objects.select_related(
+                "liquidacion__trabajador",
+                "liquidacion__periodo",
+                "anulado_por",
+            ),
+            pk=pk,
+        )
+
+    def get(self, request, pk):
+        pago = self._pago(pk)
+        if pago.anulado:
+            messages.error(request, "Este pago ya está anulado.")
+            return redirect(
+                "remuneraciones:liquidacion_detalle",
+                pk=pago.liquidacion_id,
+            )
+        return render(
+            request,
+            "remuneraciones/pagos/anular.html",
+            {
+                "pago": pago,
+                "liquidacion": pago.liquidacion,
+                "form": PagoRemuneracionAnularForm(),
+            },
+        )
+
+    def post(self, request, pk):
+        pago = self._pago(pk)
+        if pago.anulado:
+            messages.error(request, "Este pago ya está anulado.")
+            return redirect(
+                "remuneraciones:liquidacion_detalle",
+                pk=pago.liquidacion_id,
+            )
+        form = PagoRemuneracionAnularForm(request.POST)
+        if not form.is_valid():
+            return render(
+                request,
+                "remuneraciones/pagos/anular.html",
+                {
+                    "pago": pago,
+                    "liquidacion": pago.liquidacion,
+                    "form": form,
+                },
+            )
+        try:
+            anular_pago(
+                pago,
+                motivo=form.cleaned_data["motivo"],
+                usuario=request.user,
+            )
+            messages.success(request, "Pago anulado.")
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+        return redirect(
+            "remuneraciones:liquidacion_detalle",
+            pk=pago.liquidacion_id,
+        )
 
 
 class CostoListView(

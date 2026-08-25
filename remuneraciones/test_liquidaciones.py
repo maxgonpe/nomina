@@ -24,9 +24,9 @@ from remuneraciones.services.liquidaciones import (
     calcular,
     calcular_periodo,
     marcar_pagada,
-    registrar_pago,
     validar,
 )
+from remuneraciones.services.pagos import registrar_pago
 from remuneraciones.services.movimientos import registrar_movimiento
 from remuneraciones.services.periodos import (
     abrir,
@@ -260,10 +260,19 @@ class LiquidacionMotorTests(Rem005Base):
             usuario=self.user,
         )
         liq.refresh_from_db()
+        with self.assertRaises(ValidationError):
+            marcar_pagada(liq, usuario=self.user)
+        registrar_pago(
+            liq,
+            fecha=timezone.localdate(),
+            monto=Decimal("700000"),
+            usuario=self.user,
+        )
+        liq.refresh_from_db()
         marcar_pagada(liq, usuario=self.user)
         liq.refresh_from_db()
         self.assertEqual(liq.estado, LiquidacionMensual.Estado.PAGADA)
-        self.assertEqual(liq.total_pagado, Decimal("100000.00"))
+        self.assertEqual(liq.total_pagado, Decimal("800000.00"))
 
     def test_periodo_cerrado_no_recalcula(self):
         liq = calcular(self.trabajador, self.periodo, usuario=self.user)
