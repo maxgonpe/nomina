@@ -24,6 +24,7 @@
           <a class="nav-link" href="{% url 'remuneraciones:resumen_anual_actual' %}">Resumen</a>
           <a class="nav-link" href="{% url 'remuneraciones:concepto_lista' %}">Conceptos</a>
           <a class="nav-link" href="{% url 'rendiciones:rendicion_lista' %}">Rendiciones</a>
+          <a class="nav-link" href="{% url 'rendiciones:rendicion_resumen' %}">Resumen REN</a>
           <a class="nav-link" href="{% url 'core:parametro_lista' %}">Parámetros</a>
           {% if user.is_staff %}
             <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>

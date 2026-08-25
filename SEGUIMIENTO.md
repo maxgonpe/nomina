@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al cerrar **REN005** (flujo de aprobación).
+Punto de corte: **25 de agosto de 2026**, al cerrar **REN006** (consultas, filtros y reportes).
 
-Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN005.
+Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN006.
 
 ## Dónde estamos
 
@@ -23,9 +23,9 @@ Orden ejecutado: `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 �
 | REN002 Distribución por centro de costo | Hecho |
 | REN003 Validación y cuadratura | Hecho |
 | REN004 Documentos y respaldos | Hecho |
-| REN005 Flujo de aprobación | **Hecho** |
-| REN006 Consultas, filtros y reportes | **Siguiente** |
-| REN007 Preparación Finanzas e integración Excel | Pendiente |
+| REN005 Flujo de aprobación | Hecho |
+| REN006 Consultas, filtros y reportes | **Hecho** |
+| REN007 Preparación Finanzas e integración Excel | **Siguiente** |
 
 Orden del Bloque 2:
 
@@ -79,6 +79,13 @@ Modelos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`
 - URLs: `/presentar/` `/aprobar/` `/rechazar/` `/reabrir/` `/anular/` (cambio de estado solo POST)
 - Migración `0003_flujo_aprobacion`
 - Tests: `rendiciones/test_estados.py` — **11 OK** (suite rendiciones **52 OK**)
+
+### REN006 — Consultas, filtros y reportes (hecho)
+
+- `services/reportes.py`: `filtrar_rendiciones`, `resumen_por_centro`, `filas_exportacion`
+- Listado: filtros año/mes/trabajador/CC/estado/fecha (`FiltroRendicionForm`)
+- Resumen: `/rendiciones/resumen/` — totales por centro y trabajador; default APROBADA+PAGADA
+- Tests: `rendiciones/test_reportes.py` — **9 OK** (suite rendiciones **61 OK**)
 
 ## Qué quedó construido (Bloque 1 — no rehacer)
 
@@ -140,10 +147,10 @@ python manage.py runserver 127.0.0.1:8000
 ```
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
-- Primera tarea: **REN006 — Consultas, filtros y reportes**
-  1. Leer `otros/mini-especificaciones/REN/REN006 — Consultas, filtros y reportes.docx`
-  2. `services/reportes.py`; resumen por CC; `filas_exportacion()`
-  3. Tests; actualizar esta tabla y el skill
+- Primera tarea: **REN007 — Preparación Finanzas e integración Excel**
+  1. Leer `otros/mini-especificaciones/REN/REN007 — Preparación para Finanzas e integración Excel.docx`
+  2. `services/integracion.py`: `datos_financieros()`, `filas_excel()`; no implementar Finanzas
+  3. Tests; actualizar esta tabla y el skill; **cierra Bloque 2**
 
 ## Roadmap de bloques (sistema completo)
 

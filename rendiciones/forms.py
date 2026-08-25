@@ -6,6 +6,7 @@ from django.forms import BaseInlineFormSet, inlineformset_factory
 
 from core.models import CentroCosto
 from rendiciones.models import DocumentoRendicion, Rendicion, RendicionDetalle
+from rendiciones.services.reportes import MESES_ES
 from rrhh.models import Trabajador
 
 EXTENSIONES_DOCUMENTO = ("pdf", "jpg", "jpeg", "png")
@@ -235,3 +236,57 @@ class AnularRendicionForm(forms.Form):
         if not motivo:
             raise ValidationError("El motivo de anulación es obligatorio.")
         return motivo
+
+
+class FiltroRendicionForm(forms.Form):
+    anio = forms.IntegerField(
+        required=False,
+        min_value=2000,
+        max_value=2100,
+        widget=forms.NumberInput(attrs={"class": "form-control", "placeholder": "Año"}),
+    )
+    mes = forms.ChoiceField(
+        required=False,
+        choices=[("", "Todos")] + [(str(m), MESES_ES[m]) for m in range(1, 13)],
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    trabajador = forms.ModelChoiceField(
+        required=False,
+        queryset=Trabajador.objects.none(),
+        empty_label="Todos",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    centro_costo = forms.ModelChoiceField(
+        required=False,
+        queryset=CentroCosto.objects.none(),
+        empty_label="Todos",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    estado = forms.ChoiceField(
+        required=False,
+        choices=[("", "Todos")] + list(Rendicion.Estado.choices),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    fecha = forms.DateField(
+        required=False,
+        widget=forms.DateInput(
+            attrs={"class": "form-control", "type": "date"},
+            format="%Y-%m-%d",
+        ),
+        input_formats=["%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"],
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["trabajador"].queryset = Trabajador.objects.order_by(
+            "nombre_completo"
+        )
+        self.fields["centro_costo"].queryset = CentroCosto.objects.order_by(
+            "codigo"
+        )
+
+    def clean_mes(self):
+        mes = self.cleaned_data.get("mes")
+        if not mes:
+            return None
+        return int(mes)

@@ -14,10 +14,13 @@ from django.views.generic import (
     UpdateView,
 )
 
+from django.utils import timezone
+
 from core.mixins import AuditFormMixin
 from rendiciones.forms import (
     AnularRendicionForm,
     DocumentoRendicionForm,
+    FiltroRendicionForm,
     RechazarRendicionForm,
     RendicionDetalleFormSet,
     RendicionForm,
@@ -36,8 +39,13 @@ from rendiciones.services.rendiciones import (
     guardar_distribucion,
     puede_editar,
     puede_editar_documentos,
-    puede_presentar,
     validar_cuadratura,
+)
+from rendiciones.services.reportes import (
+    ESTADOS_OFICIALES,
+    anios_disponibles,
+    filtrar_rendiciones,
+    resumen_por_centro,
 )
 from rrhh.models import Trabajador
 
@@ -52,27 +60,101 @@ class RendicionListView(
     template_name = "rendiciones/rendicion_list.html"
     context_object_name = "rendiciones"
 
+    def get_filtro_form(self):
+        return FiltroRendicionForm(self.request.GET or None)
+
     def get_queryset(self):
-        qs = (
-            super()
-            .get_queryset()
-            .select_related("trabajador")
-        )
-        trabajador_id = self.request.GET.get("trabajador", "").strip()
-        if trabajador_id.isdigit():
-            qs = qs.filter(trabajador_id=int(trabajador_id))
-        estado = self.request.GET.get("estado", "").strip()
-        if estado:
-            qs = qs.filter(estado=estado)
+        form = self.get_filtro_form()
+        qs = Rendicion.objects.select_related("trabajador")
+        if form.is_valid():
+            data = form.cleaned_data
+            estados = [data["estado"]] if data.get("estado") else None
+            qs = filtrar_rendiciones(
+                qs,
+                anio=data.get("anio"),
+                mes=data.get("mes"),
+                fecha=data.get("fecha"),
+                trabajador_id=(
+                    data["trabajador"].pk if data.get("trabajador") else None
+                ),
+                centro_costo_id=(
+                    data["centro_costo"].pk if data.get("centro_costo") else None
+                ),
+                estados=estados,
+            )
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["trabajador_id"] = self.request.GET.get("trabajador", "").strip()
-        context["estado"] = self.request.GET.get("estado", "").strip()
+        form = self.get_filtro_form()
+        context["filtro_form"] = form
         context["estados"] = Rendicion.Estado.choices
-        context["trabajadores"] = Trabajador.objects.order_by("nombre_completo")
+        # querystring para paginación
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        context["filtro_qs"] = params.urlencode()
         return context
+
+
+class ResumenRendicionesView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    """REN006 — totales por centro / trabajador (reporte)."""
+
+    permission_required = "rendiciones.view_rendicion"
+    template_name = "rendiciones/resumen.html"
+
+    def get(self, request):
+        form = FiltroRendicionForm(request.GET or None)
+        anio = None
+        mes = None
+        trabajador_id = None
+        centro_id = None
+        if form.is_valid():
+            data = form.cleaned_data
+            anio = data.get("anio")
+            mes = data.get("mes")
+            if data.get("trabajador"):
+                trabajador_id = data["trabajador"].pk
+            if data.get("centro_costo"):
+                centro_id = data["centro_costo"].pk
+        if anio is None and not request.GET:
+            anio = timezone.localdate().year
+
+        # Estado del resumen: GET estados= o estado=; default oficiales
+        estados_param = request.GET.get("estados", "").strip()
+        estado_uno = request.GET.get("estado", "").strip()
+        if estados_param:
+            estados = [p.strip() for p in estados_param.split(",") if p.strip()]
+        elif estado_uno:
+            estados = [estado_uno]
+        else:
+            estados = list(ESTADOS_OFICIALES)
+
+        resumen = resumen_por_centro(
+            anio=anio,
+            mes=mes,
+            trabajador_id=trabajador_id,
+            centro_costo_id=centro_id,
+            estados=estados,
+        )
+        anios = list(anios_disponibles())
+        if anio and anio not in anios:
+            anios = sorted(set(anios + [anio]), reverse=True)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "filtro_form": form,
+                "resumen": resumen,
+                "anios": anios,
+                "estados_oficiales": ESTADOS_OFICIALES,
+                "usar_oficiales": set(estados) == set(ESTADOS_OFICIALES),
+            },
+        )
 
 
 class RendicionCreateView(

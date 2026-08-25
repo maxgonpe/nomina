@@ -79,7 +79,7 @@ rendiciones/
 | REN003 | ✓ Solo cuadrada puede presentarse |
 | REN004 | ✓ Múltiples respaldos trazables en media |
 | REN005 | ✓ Ninguna transición salta el flujo |
-| REN006 | Totales Django reconstruyen la tabla Excel de rendiciones |
+| REN006 | ✓ Totales Django reconstruyen la tabla Excel de rendiciones |
 | REN007 | Salida normalizada a Finanzas/Excel sin conocer su interior |
 
 ## Roadmap posterior (contexto)

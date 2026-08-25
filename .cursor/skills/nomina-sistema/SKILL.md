@@ -82,4 +82,4 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 Bitácora: [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md). Handoff: [`CONTEXTO.md`](../../../CONTEXTO.md).
 
-Corte: **Bloque 1 + REN001–REN005 cerrados**. **Siguiente: REN006** (consultas y reportes).
+Corte: **Bloque 1 + REN001–REN006 cerrados**. **Siguiente: REN007** (interfaces Finanzas/Excel; cierra Bloque 2).

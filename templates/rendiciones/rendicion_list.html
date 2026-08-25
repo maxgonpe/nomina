@@ -1,33 +1,41 @@
 {% extends "base.html" %}
+{% load l10n %}
 {% block title %}Rendiciones{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Rendiciones</h1>
-  {% if perms.rendiciones.add_rendicion %}
-    <a class="btn btn-primary" href="{% url 'rendiciones:rendicion_crear' %}">Nueva rendición</a>
-  {% endif %}
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_resumen' %}">Resumen</a>
+    {% if perms.rendiciones.add_rendicion %}
+      <a class="btn btn-primary" href="{% url 'rendiciones:rendicion_crear' %}">Nueva rendición</a>
+    {% endif %}
+  </div>
 </div>
 
 <form class="row g-2 mb-3" method="get">
-  <div class="col-md-5">
-    <label class="form-label" for="trabajador">Trabajador</label>
-    <select class="form-select" name="trabajador" id="trabajador">
-      <option value="">Todos</option>
-      {% for t in trabajadores %}
-        <option value="{{ t.pk }}" {% if trabajador_id == t.pk|stringformat:"d" %}selected{% endif %}>
-          {{ t.nombre_completo }}
-        </option>
-      {% endfor %}
-    </select>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ filtro_form.anio.id_for_label }}">Año</label>
+    {{ filtro_form.anio }}
   </div>
-  <div class="col-md-5">
-    <label class="form-label" for="estado">Estado</label>
-    <select class="form-select" name="estado" id="estado">
-      <option value="">Todos</option>
-      {% for value, label in estados %}
-        <option value="{{ value }}" {% if estado == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ filtro_form.mes.id_for_label }}">Mes</label>
+    {{ filtro_form.mes }}
+  </div>
+  <div class="col-md-3">
+    <label class="form-label" for="{{ filtro_form.trabajador.id_for_label }}">Trabajador</label>
+    {{ filtro_form.trabajador }}
+  </div>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ filtro_form.centro_costo.id_for_label }}">Centro</label>
+    {{ filtro_form.centro_costo }}
+  </div>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ filtro_form.estado.id_for_label }}">Estado</label>
+    {{ filtro_form.estado }}
+  </div>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ filtro_form.fecha.id_for_label }}">Fecha</label>
+    {{ filtro_form.fecha }}
   </div>
   <div class="col-md-2 d-flex align-items-end">
     <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
@@ -86,7 +94,7 @@
     <ul class="pagination">
       {% if page_obj.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&trabajador={{ trabajador_id }}&estado={{ estado }}">Anterior</a>
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtro_qs %}&{{ filtro_qs }}{% endif %}">Anterior</a>
         </li>
       {% endif %}
       <li class="page-item disabled">
@@ -94,7 +102,7 @@
       </li>
       {% if page_obj.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.next_page_number }}&trabajador={{ trabajador_id }}&estado={{ estado }}">Siguiente</a>
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtro_qs %}&{{ filtro_qs }}{% endif %}">Siguiente</a>
         </li>
       {% endif %}
     </ul>

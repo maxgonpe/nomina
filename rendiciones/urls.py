@@ -11,6 +11,11 @@ urlpatterns = [
         name="rendicion_lista",
     ),
     path(
+        "resumen/",
+        views.ResumenRendicionesView.as_view(),
+        name="rendicion_resumen",
+    ),
+    path(
         "nueva/",
         views.RendicionCreateView.as_view(),
         name="rendicion_crear",
