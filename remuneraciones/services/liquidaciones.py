@@ -179,6 +179,10 @@ def calcular(trabajador, periodo, *, usuario=None, dias_fallados=None):
         if usuario is not None:
             liquidacion.actualizado_por = usuario
         liquidacion.save()
+
+        from remuneraciones.services.costos import generar_desde_liquidacion
+
+        generar_desde_liquidacion(liquidacion, usuario=usuario)
     liquidacion.refresh_from_db()
     return liquidacion
 
@@ -267,6 +271,9 @@ def anular(liquidacion, usuario=None):
         raise ValidationError("La liquidación ya está anulada.")
     if liquidacion.estado == LiquidacionMensual.Estado.CERRADA:
         raise ValidationError("Una liquidación cerrada no se anula.")
+    from remuneraciones.services.costos import eliminar_si_existe
+
+    eliminar_si_existe(liquidacion)
     liquidacion.estado = LiquidacionMensual.Estado.ANULADA
     if usuario is not None:
         liquidacion.actualizado_por = usuario

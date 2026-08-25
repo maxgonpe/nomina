@@ -33,11 +33,17 @@ from remuneraciones.forms import (
 )
 from remuneraciones.models import (
     ConceptoRemuneracion,
+    CostoTrabajadorPeriodo,
     Finiquito,
     HoraExtra,
     LiquidacionMensual,
     MovimientoRemuneracion,
     PeriodoRemuneracion,
+)
+from remuneraciones.services.costos import (
+    generar_desde_liquidacion,
+    generar_periodo as generar_costos_periodo,
+    totales_por_centro,
 )
 from remuneraciones.services.finiquitos import (
     acciones_disponibles as acciones_finiquito,
@@ -1243,6 +1249,10 @@ def _contexto_liquidacion(liquidacion, *, pago_form=None, dias_form=None):
     movimientos = liquidacion.movimientos.select_related("concepto")
     haberes = [m for m in movimientos if m.concepto.tipo == "HABER"]
     descuentos = [m for m in movimientos if m.concepto.tipo == "DESCUENTO"]
+    try:
+        costo = liquidacion.costo_trabajador
+    except CostoTrabajadorPeriodo.DoesNotExist:
+        costo = None
     return {
         "liquidacion": liquidacion,
         "acciones": acciones_liquidacion(liquidacion),
@@ -1254,6 +1264,7 @@ def _contexto_liquidacion(liquidacion, *, pago_form=None, dias_form=None):
         or DiasFalladosForm(
             initial={"dias_fallados": liquidacion.dias_fallados}
         ),
+        "costo": costo,
     }
 
 
@@ -1447,3 +1458,151 @@ class LiquidacionPagoView(
         except ValidationError as exc:
             messages.error(request, _mensaje_error(exc))
         return redirect("remuneraciones:liquidacion_detalle", pk=pk)
+
+
+class CostoListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
+    permission_required = "remuneraciones.view_costotrabajadorperiodo"
+    model = CostoTrabajadorPeriodo
+    paginate_by = 50
+    template_name = "remuneraciones/costos/lista.html"
+    context_object_name = "costos"
+
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related(
+                "liquidacion__trabajador",
+                "liquidacion__periodo",
+                "centro_costo",
+            )
+        )
+        trabajador_id = self.kwargs.get("trabajador_id") or self.request.GET.get(
+            "trabajador"
+        )
+        periodo_id = self.kwargs.get("periodo_id") or self.request.GET.get(
+            "periodo"
+        )
+        if trabajador_id:
+            qs = qs.filter(liquidacion__trabajador_id=trabajador_id)
+        if periodo_id:
+            qs = qs.filter(liquidacion__periodo_id=periodo_id)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q_trabajador"] = str(
+            self.kwargs.get("trabajador_id")
+            or self.request.GET.get("trabajador")
+            or ""
+        )
+        context["q_periodo"] = str(
+            self.kwargs.get("periodo_id")
+            or self.request.GET.get("periodo")
+            or ""
+        )
+        context["trabajadores"] = Trabajador.objects.filter(
+            activo=True
+        ).order_by("nombre_completo")
+        context["periodos"] = PeriodoRemuneracion.objects.all()
+        context["trabajador"] = None
+        context["periodo"] = None
+        context["totales_centro"] = []
+        if self.kwargs.get("trabajador_id"):
+            context["trabajador"] = get_object_or_404(
+                Trabajador, pk=self.kwargs["trabajador_id"]
+            )
+        if self.kwargs.get("periodo_id"):
+            context["periodo"] = get_object_or_404(
+                PeriodoRemuneracion, pk=self.kwargs["periodo_id"]
+            )
+            context["totales_centro"] = totales_por_centro(context["periodo"])
+        return context
+
+
+class CostoDetailView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DetailView,
+):
+    permission_required = "remuneraciones.view_costotrabajadorperiodo"
+    model = CostoTrabajadorPeriodo
+    template_name = "remuneraciones/costos/detalle.html"
+    context_object_name = "costo"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            "liquidacion__trabajador",
+            "liquidacion__periodo",
+            "centro_costo",
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["detalles"] = self.object.detalles.select_related("concepto")
+        context["puede_regenerar"] = (
+            not self.object.liquidacion.periodo.esta_cerrado
+            and self.request.user.has_perm(
+                "remuneraciones.change_costotrabajadorperiodo"
+            )
+        )
+        return context
+
+
+class CostoGenerarLiquidacionView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.change_costotrabajadorperiodo"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        liquidacion = get_object_or_404(LiquidacionMensual, pk=pk)
+        try:
+            costo = generar_desde_liquidacion(
+                liquidacion, usuario=request.user
+            )
+            messages.success(
+                request,
+                f"Costo generado para {liquidacion.trabajador} "
+                f"(total {costo.total}).",
+            )
+            return redirect(costo)
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+            return redirect(liquidacion)
+
+
+class PeriodoGenerarCostosView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.change_costotrabajadorperiodo"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        periodo = get_object_or_404(PeriodoRemuneracion, pk=pk)
+        try:
+            ok, errores = generar_costos_periodo(periodo, usuario=request.user)
+            if errores:
+                messages.error(request, " ".join(errores))
+            elif ok:
+                messages.success(
+                    request,
+                    f"{periodo.nombre}: {len(ok)} costo(s) generado(s).",
+                )
+            else:
+                messages.warning(
+                    request,
+                    f"{periodo.nombre}: no hay liquidaciones calculadas "
+                    "para generar costos.",
+                )
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+        return redirect("remuneraciones:periodo_detalle", pk=periodo.pk)

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Costo {{ costo.liquidacion.trabajador.nombre_completo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Costo — {{ costo.liquidacion.trabajador.nombre_completo }}</h1>
+    <p class="text-muted mb-0">{{ costo.liquidacion.periodo.nombre }}</p>
+  </div>
+  <div class="btn-group">
+    <a class="btn btn-outline-primary" href="{% url 'remuneraciones:liquidacion_detalle' costo.liquidacion_id %}">Ver liquidación</a>
+    <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:costo_lista' %}">Volver</a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Trabajador</dt>
+      <dd class="col-sm-9">
+        <a href="{% url 'rrhh:trabajador_detalle' costo.liquidacion.trabajador_id %}">
+          {{ costo.liquidacion.trabajador.nombre_completo }}
+        </a>
+      </dd>
+      <dt class="col-sm-3">Período</dt>
+      <dd class="col-sm-9">{{ costo.liquidacion.periodo.nombre }}</dd>
+      <dt class="col-sm-3">Centro de costo (snapshot)</dt>
+      <dd class="col-sm-9">
+        {% if costo.centro_costo_codigo_snapshot %}
+          {{ costo.centro_costo_codigo_snapshot }} — {{ costo.centro_costo_nombre_snapshot }}
+        {% else %}
+          —
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Días trabajados</dt>
+      <dd class="col-sm-9">{{ costo.dias_trabajados }}</dd>
+      <dt class="col-sm-3">Total costo</dt>
+      <dd class="col-sm-9">{{ costo.total }}</dd>
+      <dt class="col-sm-3">Calculado</dt>
+      <dd class="col-sm-9">
+        {% if costo.calculado_en %}{{ costo.calculado_en|date:"d-m-Y H:i" }}{% else %}—{% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+
+{% if puede_regenerar %}
+<div class="mb-4">
+  <form method="post" action="{% url 'remuneraciones:liquidacion_generar_costo' costo.liquidacion_id %}" class="d-inline">
+    {% csrf_token %}
+    <button class="btn btn-outline-primary" type="submit">Regenerar desde la liquidación</button>
+  </form>
+</div>
+{% endif %}
+
+<h2 class="h5">Detalle de componentes</h2>
+<div class="card shadow-sm mb-4">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Concepto</th>
+          <th>Origen</th>
+          <th class="text-end">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in detalles %}
+          <tr {% if not item.concepto.incluye_en_total %}class="table-light"{% endif %}>
+            <td>
+              {{ item.concepto.nombre }}
+              {% if not item.concepto.incluye_en_total %}
+                <span class="badge text-bg-secondary">referencia</span>
+              {% endif %}
+              {% if item.observaciones %}<div class="small text-muted">{{ item.observaciones }}</div>{% endif %}
+            </td>
+            <td>{{ item.concepto.codigo_origen|default:"—" }}</td>
+            <td class="text-end">{{ item.monto }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="text-muted">Sin detalle.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="2">Total costo (sin líneas de referencia)</th>
+          <th class="text-end">{{ costo.total }}</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

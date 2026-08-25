@@ -22,6 +22,9 @@
     {% if perms.remuneraciones.view_liquidacionmensual %}
       <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_liquidaciones' periodo.pk %}">Liquidaciones</a>
     {% endif %}
+    {% if perms.remuneraciones.view_costotrabajadorperiodo %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_costos' periodo.pk %}">Costos</a>
+    {% endif %}
     <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_lista' %}">Volver</a>
   </div>
 </div>
@@ -73,6 +76,12 @@
     <form method="post" action="{% url 'remuneraciones:periodo_validar' periodo.pk %}" class="d-inline">
       {% csrf_token %}
       <button class="btn btn-outline-primary" type="submit">Validar</button>
+    </form>
+  {% endif %}
+  {% if not periodo.esta_cerrado and perms.remuneraciones.change_costotrabajadorperiodo %}
+    <form method="post" action="{% url 'remuneraciones:periodo_generar_costos' periodo.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-secondary" type="submit">Generar costos</button>
     </form>
   {% endif %}
   {% if acciones.cerrar %}

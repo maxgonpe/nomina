@@ -130,3 +130,76 @@ CONCEPTOS_INICIALES = [
         "orden": 220,
     },
 ]
+
+# Componentes de la tercera tabla Excel (costo trabajador). Lista configurable.
+# codigo_origen → ConceptoRemuneracion; vacío + incluye_en_total=False = TOTAL_LIQUIDADO.
+CONCEPTOS_COSTO_INICIALES = [
+    {
+        "codigo": "SUELDO_BASE",
+        "nombre": "Sueldo base",
+        "codigo_origen": "SUELDO_BASE",
+        "incluye_en_total": True,
+        "orden": 10,
+    },
+    {
+        "codigo": "DESGASTE_HERRAMIENTAS",
+        "nombre": "Desgaste de herramientas",
+        "codigo_origen": "DESGASTE_HERRAMIENTAS",
+        "incluye_en_total": True,
+        "orden": 20,
+    },
+    {
+        "codigo": "MOVILIZACION",
+        "nombre": "Movilización",
+        "codigo_origen": "MOVILIZACION",
+        "incluye_en_total": True,
+        "orden": 30,
+    },
+    {
+        "codigo": "COLACION",
+        "nombre": "Colación",
+        "codigo_origen": "COLACION",
+        "incluye_en_total": True,
+        "orden": 40,
+    },
+    {
+        "codigo": "ALOJAMIENTO",
+        "nombre": "Alojamiento",
+        "codigo_origen": "ALOJAMIENTO",
+        "incluye_en_total": True,
+        "orden": 50,
+    },
+    {
+        "codigo": "HHEX",
+        "nombre": "Horas extraordinarias (HHEX)",
+        "codigo_origen": "HORAS_EXTRA",
+        "incluye_en_total": True,
+        "orden": 60,
+        "descripcion": "Equivalente Excel HHEX; monto desde HORAS_EXTRA de la liquidación.",
+    },
+    {
+        "codigo": "BONO_PRODUCCION",
+        "nombre": "Bonos de producción",
+        "codigo_origen": "BONO_PRODUCCION",
+        "incluye_en_total": True,
+        "orden": 70,
+    },
+    {
+        "codigo": "BONO_ASISTENCIA",
+        "nombre": "Bono de asistencia",
+        "codigo_origen": "BONO_ASISTENCIA",
+        "incluye_en_total": True,
+        "orden": 80,
+    },
+    {
+        "codigo": "TOTAL_LIQUIDADO",
+        "nombre": "Total liquidado",
+        "codigo_origen": "",
+        "incluye_en_total": False,
+        "orden": 900,
+        "descripcion": (
+            "Referencia de lo que recibe el trabajador "
+            "(liquidacion.total_liquidado). No suma al costo."
+        ),
+    },
+]

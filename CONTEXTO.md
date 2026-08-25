@@ -15,7 +15,7 @@ Lee en este orden, sin rehacer lo ya cerrado:
 3. .cursor/skills/nomina-sistema/SKILL.md
 4. La mini-especificación del siguiente ítem en otros/mini-especificaciones/ (o otros/pdf/)
 
-Siguiente tarea: REM009 — Costos mensuales por trabajador.
+Siguiente tarea: REM010 — Resumen anual y gráfico.
 Django es la fuente oficial. Reutilizar modelos existentes. UI en español (Chile).
 ```
 
@@ -94,7 +94,7 @@ Django 5.2.17, SQLite ahora (diseñar para PostgreSQL), venv en `.env/`, locale 
 cd /home/maxgonpe/nomina
 source .env/bin/activate
 python manage.py runserver 127.0.0.1:8000
-python manage.py test rrhh core remuneraciones   # 98 OK al cerrar REM005
+python manage.py test rrhh core remuneraciones   # 110 OK al cerrar REM009
 ```
 
 Login: `/cuentas/login/`. Hay un superusuario de prueba `admin`/`admin`; el usuario también creó el suyo. No depender de esa clave.
@@ -118,8 +118,8 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → mini-spec del siguien
 
 ## Estado al corte (25 ago 2026)
 
-**Cerrado:** infra + REM001–008 + REM005.  
-**Siguiente:** **REM009** (costos mensuales por trabajador).
+**Cerrado:** infra + REM001–009 (Bloque 1 casi completo).  
+**Siguiente:** **REM010** (resumen anual y gráfico).
 
 | ID | Qué | Rutas / servicios clave |
 |----|-----|-------------------------|
@@ -132,8 +132,9 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → mini-spec del siguien
 | REM007 | Movimientos por concepto; signo = tipo | `/remuneraciones/movimientos/`; `registrar_movimiento()`, `suma_movimientos()` |
 | REM008 | Finiquito propio; alimenta FINIQUITO sin duplicar | `/remuneraciones/finiquitos/`; `validar()`, `sincronizar_movimiento_finiquito()` |
 | REM005 | Motor de liquidación; snapshots; pagos | `/remuneraciones/liquidaciones/`; `calcular()`, `calcular_periodo()` |
+| REM009 | Costo desde liquidación; snapshot CC | `/remuneraciones/costos/`; `generar_desde_liquidacion()` |
 
-Migraciones aplicadas: `rrhh` 0002, `core` 0002, `remuneraciones` 0005.
+Migraciones aplicadas: `rrhh` 0002, `core` 0002, `remuneraciones` 0007.
 
 Catálogo inicial de conceptos: SUELDO_BASE, HORAS_EXTRA, AGUINALDO, ALOJAMIENTO, MOVILIZACION, COLACION, DESGASTE_HERRAMIENTAS, BONO_PRODUCCION, BONO_ASISTENCIA, FINIQUITO, ANTICIPO, PRESTAMO_ENTREGADO, PRESTAMO_DESCUENTO, INASISTENCIA. En verificación UI existe además **BONO_FAENA** (un haber nuevo no toca `LiquidacionMensual`).
 
@@ -142,25 +143,32 @@ Catálogo inicial de conceptos: SUELDO_BASE, HORAS_EXTRA, AGUINALDO, ALOJAMIENTO
 ### Datos locales de prueba (se pueden dejar o borrar)
 
 - Trabajador `ANA PRUEBA PEREZ` / `18.651.495-5` con contrato desde 01-01-2026 (cargo MAESTRO, CC EGC, sueldo 800.000)
-- Período **Agosto 2026** (puede quedar CALCULADO tras verificar REM005) con horas extra, movimientos (aguinaldo, anticipo, BONO_FAENA) y finiquito validado
-- Liquidación **calculada/validada** de ANA con snapshots y totales desde movimientos
+- Período **Agosto 2026** (CALCULADO) con horas extra, movimientos y finiquito validado
+- Liquidación **validada** de ANA; costo generado (snapshot EGC)
 - Concepto `BONO_FAENA`
 
 ---
 
-## REM009 — qué hay que hacer al retomar
+## REM010 — qué hay que hacer al retomar
 
-Mini-spec: `otros/pdf/` / `otros/mini-especificaciones/` (REM009 costos).
+Mini-spec: `otros/pdf/REM010 — Resumen anual y gráfico.pdf`.
 
-- Generar `CostoTrabajadorPeriodo` (+ detalle) desde la liquidación.
-- Snapshot de centro de costo; no reinventar el motor de liquidación.
-- Modelos ya existen: `ConceptoCostoTrabajador`, `CostoTrabajadorPeriodo`, `CostoTrabajadorDetalle`.
+- Resumen anual por consulta (no modelo ene–dic).
+- Chart.js en UI.
+- Usar liquidaciones/costos existentes; no reinventar el motor.
+
+## REM009 — ya cerrado (no rehacer)
+
+- `CostoTrabajadorPeriodo` 1:1 con liquidación; detalle por `ConceptoCostoTrabajador`.
+- Auto al `calcular()`; snapshot de CC; TOTAL_LIQUIDADO informativo.
+- Totales por centro: `totales_por_centro(periodo)` (insumo futuro de finanzas).
 
 ## REM005 — ya cerrado (no rehacer)
 
 - Motor en `remuneraciones/services/liquidaciones.py`.
 - Snapshots; HE vía `valor_hora_extra`; proporcionales si hay parámetro; finiquito sin duplicar; pagos reales para PAGADA.
 - UI: listado/detalle, calcular desde período, días fallados, validar/anular/pagar.
+- Al calcular también genera/actualiza el costo (REM009).
 
 ## REM008 — ya cerrado (no rehacer)
 
@@ -191,6 +199,7 @@ Mini-spec: `otros/pdf/` / `otros/mini-especificaciones/` (REM009 costos).
 | Movimientos | `/remuneraciones/movimientos/` |
 | Finiquitos | `/remuneraciones/finiquitos/` |
 | Liquidaciones | `/remuneraciones/liquidaciones/` |
+| Costos | `/remuneraciones/costos/` |
 | Conceptos | `/remuneraciones/conceptos/` |
 | Parámetros | `/parametros/` |
 | Admin | `/admin/` |
@@ -201,8 +210,8 @@ Nav en `templates/base.html`. Permisos por modelo Django (`view_` / `add_` / `ch
 
 ## Qué no hacer en el chat nuevo
 
-- No rehacer REM001–008 ni REM005 ni volver a copiar `otros/modelos/`.
-- REM009 es el siguiente; no saltar a REM010 sin cerrar 009.
+- No rehacer REM001–009 ni volver a copiar `otros/modelos/`.
+- REM010 es el siguiente (último del Bloque 1).
 - No hardcodear `0.0079545` ni `0.19`.
 - No crear modelos por mes/año ni columnas de bono en la liquidación.
 - No commitear a menos que el usuario lo pida. No pushear a menos que lo pida.

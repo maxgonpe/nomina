@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al terminar **REM005**.
+Punto de corte: **25 de agosto de 2026**, al terminar **REM009**.
 
-Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM008 ni REM005.
+Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM009.
 
 ## Dónde estamos
 
@@ -16,11 +16,11 @@ Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/
 | REM006 Horas extraordinarias | Hecho |
 | REM007 Bonos, anticipos, préstamos y movimientos | Hecho |
 | REM008 Finiquitos | Hecho |
-| REM005 Liquidación mensual (motor) | Hecho — **último cerrado** |
-| REM009 Costos mensuales por trabajador | **Siguiente** |
-| REM010 Resumen anual y gráfico | Pendiente |
+| REM005 Liquidación mensual (motor) | Hecho |
+| REM009 Costos mensuales por trabajador | Hecho — **último cerrado** |
+| REM010 Resumen anual y gráfico | **Siguiente** |
 
-Orden del Bloque 1 (siguiente: REM009):
+Orden del Bloque 1 (siguiente: REM010):
 
 `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010`
 
@@ -37,7 +37,7 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - Locale `es-cl`, zona `America/Santiago`, fechas `dd-mm-yyyy`
 - `core/validators.py`: RUT (normalizar, validar DV, formatear)
 - Admin de todas las apps
-- Migraciones aplicadas (`rrhh` hasta `0002`, `core` hasta `0002`, `remuneraciones` hasta `0005`)
+- Migraciones aplicadas (`rrhh` hasta `0002`, `core` hasta `0002`, `remuneraciones` hasta `0007`)
 
 ### REM001 — Trabajadores
 
@@ -130,6 +130,21 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - Excel export queda para `integracion_excel`
 - Tests: `remuneraciones/test_liquidaciones.py`
 
+### REM009 — Costos mensuales por trabajador
+
+- Listado y ficha: `/remuneraciones/costos/`
+- Por período / trabajador: `/remuneraciones/periodos/<id>/costos/`, `/remuneraciones/trabajadores/<id>/costos/`
+- Servicio: `remuneraciones/services/costos.py` → `generar_desde_liquidacion()`, `generar_periodo()`, `totales_por_centro()`
+- Se genera automáticamente al calcular la liquidación (REM005); también a mano desde la ficha o el período
+- Snapshot de centro de costo y días trabajados desde la liquidación (un anexo posterior no reescribe el costo de ese mes)
+- Catálogo configurable `ConceptoCostoTrabajador` (`codigo_origen` → movimiento de liquidación; `incluye_en_total=False` para TOTAL_LIQUIDADO)
+- Semilla: SUELDO_BASE, DESGASTE, MOVILIZACION, COLACION, ALOJAMIENTO, HHEX, BONO_PRODUCCION, BONO_ASISTENCIA, TOTAL_LIQUIDADO
+- `costo.total` = suma de componentes con `incluye_en_total`; TOTAL_LIQUIDADO es solo referencia de lo que recibe el trabajador
+- Anular liquidación elimina el costo; período cerrado no regenera
+- Migraciones: `remuneraciones` hasta `0007`
+- Excel de la tercera tabla: `integracion_excel`
+- Tests: `remuneraciones/test_costos.py`
+
 ## Cómo retomar
 
 ```bash
@@ -140,19 +155,19 @@ python manage.py runserver 127.0.0.1:8000
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
 - Usar el superusuario que ya creaste (hay además un `admin`/`admin` de prueba; conviene no depender de esa clave)
-- Tests: `python manage.py test rrhh core remuneraciones` — **98 OK** al cerrar REM005
+- Tests: `python manage.py test rrhh core remuneraciones` — **110 OK** al cerrar REM009
 
-Primera tarea al volver: **REM009 — Costos mensuales por trabajador**.
+Primera tarea al volver: **REM010 — Resumen anual y gráfico**.
 
-1. Leer `otros/mini-especificaciones/` (REM009 / costos).
-2. Generar `CostoTrabajadorPeriodo` desde la liquidación; snapshot de centro de costo.
-3. No hardcodear factores; reutilizar liquidación ya calculada.
-4. Actualizar la tabla de este archivo al cerrar REM009.
+1. Leer `otros/mini-especificaciones/` (REM010 / resumen).
+2. Consulta por año (no modelo ene–dic); Chart.js en UI.
+3. Alimentarse de liquidaciones/costos ya existentes.
+4. Actualizar la tabla de este archivo al cerrar REM010.
 
 ## Qué no hacer al retomar
 
 - No volver a copiar modelos desde `otros/modelos/` (ya están en las apps).
 - No crear un modelo por mes o por año.
 - No hardcodear `FACTOR_HE` ni otras tasas; ya están en parámetros (`valor("FACTOR_HE", fecha)`).
-- No rehacer REM005: el motor ya calcula con HE, movimientos y finiquitos reales.
-- No saltar a REM010 sin cerrar REM009.
+- No rehacer REM005 ni REM009.
+- REM010 es el último del Bloque 1.

@@ -974,6 +974,23 @@ class ConceptoCostoTrabajador(AuditModel):
         max_length=150,
     )
 
+    codigo_origen = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text=(
+            "Código de ConceptoRemuneracion del cual se toma el monto. "
+            "Vacío para totales de referencia (p. ej. TOTAL_LIQUIDADO)."
+        ),
+    )
+
+    incluye_en_total = models.BooleanField(
+        default=True,
+        help_text=(
+            "Si es falso, el monto es informativo y no suma al costo "
+            "(p. ej. TOTAL_LIQUIDADO)."
+        ),
+    )
+
     activo = models.BooleanField(
         default=True,
     )
@@ -991,6 +1008,7 @@ class ConceptoCostoTrabajador(AuditModel):
 
     def save(self, *args, **kwargs):
         self.codigo = self.codigo.strip().upper()
+        self.codigo_origen = (self.codigo_origen or "").strip().upper()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -1045,6 +1063,19 @@ class CostoTrabajadorPeriodo(AuditModel):
     def __str__(self):
         return f"Costo {self.liquidacion}"
 
+    def get_absolute_url(self):
+        return reverse("remuneraciones:costo_detalle", args=[self.pk])
+
+    def clean(self):
+        super().clean()
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+
+    def save(self, *args, **kwargs):
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+        super().save(*args, **kwargs)
+
 
 class CostoTrabajadorDetalle(AuditModel):
     costo_trabajador = models.ForeignKey(
@@ -1079,6 +1110,10 @@ class CostoTrabajadorDetalle(AuditModel):
                 condition=Q(monto__gte=0),
                 name="ck_costo_trab_det_monto",
             ),
+            models.UniqueConstraint(
+                fields=["costo_trabajador", "concepto"],
+                name="uq_costo_detalle_concepto",
+            ),
         ]
 
     def __str__(self):
@@ -1086,3 +1121,17 @@ class CostoTrabajadorDetalle(AuditModel):
             f"{self.costo_trabajador} - "
             f"{self.concepto}: {self.monto}"
         )
+
+    def clean(self):
+        super().clean()
+        if self.costo_trabajador_id:
+            bloquear_si_periodo_cerrado(
+                self.costo_trabajador.liquidacion.periodo
+            )
+
+    def save(self, *args, **kwargs):
+        if self.costo_trabajador_id:
+            bloquear_si_periodo_cerrado(
+                self.costo_trabajador.liquidacion.periodo
+            )
+        super().save(*args, **kwargs)

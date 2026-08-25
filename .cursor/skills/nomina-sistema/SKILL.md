@@ -77,4 +77,4 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 La bitácora viva está en [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md). El handoff para un chat nuevo está en [`CONTEXTO.md`](../../../CONTEXTO.md).
 
-Corte actual: REM005 cerrado. Siguiente: REM009 (costos mensuales por trabajador).
+Corte actual: REM009 cerrado. Siguiente: REM010 (resumen anual y gráfico).

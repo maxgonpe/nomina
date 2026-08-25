@@ -112,7 +112,16 @@ class FiniquitoAdmin(admin.ModelAdmin):
 
 @admin.register(ConceptoCostoTrabajador)
 class ConceptoCostoTrabajadorAdmin(admin.ModelAdmin):
-    list_display = ("codigo", "nombre", "activo", "orden")
+    list_display = (
+        "codigo",
+        "nombre",
+        "codigo_origen",
+        "incluye_en_total",
+        "activo",
+        "orden",
+    )
+    list_filter = ("activo", "incluye_en_total")
+    search_fields = ("codigo", "nombre", "codigo_origen")
 
 
 class CostoDetalleInline(admin.TabularInline):
@@ -122,5 +131,16 @@ class CostoDetalleInline(admin.TabularInline):
 
 @admin.register(CostoTrabajadorPeriodo)
 class CostoTrabajadorPeriodoAdmin(admin.ModelAdmin):
-    list_display = ("liquidacion", "total")
+    list_display = (
+        "liquidacion",
+        "centro_costo_codigo_snapshot",
+        "dias_trabajados",
+        "total",
+        "calculado_en",
+    )
+    list_filter = ("liquidacion__periodo",)
+    search_fields = (
+        "liquidacion__trabajador__nombre_completo",
+        "centro_costo_codigo_snapshot",
+    )
     inlines = [CostoDetalleInline]

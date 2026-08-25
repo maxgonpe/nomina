@@ -245,4 +245,34 @@ urlpatterns = [
         views.LiquidacionListView.as_view(),
         name="trabajador_liquidaciones",
     ),
+    path(
+        "costos/",
+        views.CostoListView.as_view(),
+        name="costo_lista",
+    ),
+    path(
+        "costos/<int:pk>/",
+        views.CostoDetailView.as_view(),
+        name="costo_detalle",
+    ),
+    path(
+        "liquidaciones/<int:pk>/generar-costo/",
+        views.CostoGenerarLiquidacionView.as_view(),
+        name="liquidacion_generar_costo",
+    ),
+    path(
+        "periodos/<int:pk>/generar-costos/",
+        views.PeriodoGenerarCostosView.as_view(),
+        name="periodo_generar_costos",
+    ),
+    path(
+        "periodos/<int:periodo_id>/costos/",
+        views.CostoListView.as_view(),
+        name="periodo_costos",
+    ),
+    path(
+        "trabajadores/<int:trabajador_id>/costos/",
+        views.CostoListView.as_view(),
+        name="trabajador_costos",
+    ),
 ]
