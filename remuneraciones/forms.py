@@ -8,7 +8,9 @@ from remuneraciones.models import (
     ConceptoRemuneracion,
     Finiquito,
     HoraExtra,
+    LiquidacionMensual,
     MovimientoRemuneracion,
+    PagoRemuneracion,
     PeriodoRemuneracion,
 )
 from remuneraciones.services.finiquitos import registrar as registrar_finiquito
@@ -559,3 +561,52 @@ class FiniquitoDocumentoForm(forms.ModelForm):
             ),
             "archivo": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
+
+
+class DiasFalladosForm(forms.Form):
+    dias_fallados = forms.DecimalField(
+        min_value=0,
+        max_value=30,
+        decimal_places=2,
+        label="Días fallados",
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "min": "0",
+                "max": "30",
+                "step": "0.5",
+            }
+        ),
+    )
+
+
+class PagoRemuneracionForm(forms.ModelForm):
+    class Meta:
+        model = PagoRemuneracion
+        fields = ["fecha", "monto", "medio_pago", "referencia", "observaciones"]
+        widgets = {
+            "fecha": forms.DateInput(
+                attrs={"class": "form-control", "type": "date"},
+                format="%Y-%m-%d",
+            ),
+            "monto": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0.01",
+                    "step": "0.01",
+                }
+            ),
+            "medio_pago": forms.Select(attrs={"class": "form-select"}),
+            "referencia": forms.TextInput(attrs={"class": "form-control"}),
+            "observaciones": forms.Textarea(
+                attrs={"class": "form-control", "rows": 2}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["fecha"].input_formats = ["%Y-%m-%d"]
+        self.fields["referencia"].required = False
+        self.fields["observaciones"].required = False
+        if not self.instance.pk:
+            self.fields["fecha"].initial = timezone.localdate()

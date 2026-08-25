@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al terminar **REM008**.
+Punto de corte: **25 de agosto de 2026**, al terminar **REM005**.
 
-Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM004 ni REM006–REM008.
+Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/skills/nomina-sistema/SKILL.md` y la mini-especificación del siguiente ítem. **No rehacer** modelos ni REM001–REM008 ni REM005.
 
 ## Dónde estamos
 
@@ -15,12 +15,12 @@ Al retomar: leer `CONTEXTO.md` (handoff), luego este archivo, el skill `.cursor/
 | REM004 Conceptos y parámetros | Hecho |
 | REM006 Horas extraordinarias | Hecho |
 | REM007 Bonos, anticipos, préstamos y movimientos | Hecho |
-| REM008 Finiquitos | Hecho — **último cerrado** |
-| REM005 Liquidación mensual (motor) | **Siguiente** |
-| REM009 Costos mensuales por trabajador | Pendiente |
+| REM008 Finiquitos | Hecho |
+| REM005 Liquidación mensual (motor) | Hecho — **último cerrado** |
+| REM009 Costos mensuales por trabajador | **Siguiente** |
 | REM010 Resumen anual y gráfico | Pendiente |
 
-Orden del Bloque 1 (siguiente: REM005):
+Orden del Bloque 1 (siguiente: REM009):
 
 `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010`
 
@@ -115,6 +115,21 @@ Fuera del Bloque 1 (aún sin mini-specs de implementación): rendiciones, factur
 - PDF / respaldo en `media/remuneraciones/finiquitos/<año>/<id_trabajador>/`
 - Tests: `remuneraciones/test_finiquitos.py`
 
+### REM005 — Liquidación mensual (motor)
+
+- Listado y ficha: `/remuneraciones/liquidaciones/`
+- Por período / trabajador: `/remuneraciones/periodos/<id>/liquidaciones/`, `/remuneraciones/trabajadores/<id>/liquidaciones/`
+- Motor: `remuneraciones/services/liquidaciones.py` → `calcular()`, `calcular_periodo()`, `validar()`, `anular()`, `marcar_pagada()`, `registrar_pago()`
+- Snapshots a `periodo.fecha_fin` vía `condicion_vigente` (sueldo, cargo, CC). Un anexo de otro mes no reescribe el snapshot al recalcular ese mes
+- Fórmulas: `valor_dia = sueldo/30`; `dias_trabajados = 30 - dias_fallados`; HE con `valor_hora_extra()` (nunca hardcodear factor)
+- Upsert CALCULADO: SUELDO_BASE (pactado), HORAS_EXTRA, INASISTENCIA; COLACION/MOVILIZACION/DESGASTE si hay `ParametroValor` (`dias_trabajados * mensual/30`)
+- Totales = SUM movimientos HABER − DESCUENTO; `total_a_pagar = total_liquidado`
+- Recálculo no borra MANUAL; finiquito vía `sincronizar_movimiento_finiquito()` (sin duplicar)
+- PAGADA solo si hay `PagoRemuneracion` (monto > 0)
+- Desde el período: «Calcular liquidaciones» corre el motor y, si estaba ABIERTO, pasa a CALCULADO
+- Excel export queda para `integracion_excel`
+- Tests: `remuneraciones/test_liquidaciones.py`
+
 ## Cómo retomar
 
 ```bash
@@ -125,18 +140,19 @@ python manage.py runserver 127.0.0.1:8000
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
 - Usar el superusuario que ya creaste (hay además un `admin`/`admin` de prueba; conviene no depender de esa clave)
-- Tests: `python manage.py test rrhh core remuneraciones`
+- Tests: `python manage.py test rrhh core remuneraciones` — **98 OK** al cerrar REM005
 
-Primera tarea al volver: **REM005 — Liquidación mensual (motor)**.
+Primera tarea al volver: **REM009 — Costos mensuales por trabajador**.
 
-1. Leer `otros/mini-especificaciones/` (REM005 / liquidación).
-2. Cálculo en `services/`; snapshots de sueldo/cargo/CC; usar `suma_horas_extra`, `suma_movimientos`, `suma_finiquitos` y `valor("FACTOR_HE", fecha)`.
-3. Al recalcular, `sincronizar_movimiento_finiquito()` (no crear otro FINIQUITO).
-4. Actualizar la tabla de este archivo al cerrar REM005.
+1. Leer `otros/mini-especificaciones/` (REM009 / costos).
+2. Generar `CostoTrabajadorPeriodo` desde la liquidación; snapshot de centro de costo.
+3. No hardcodear factores; reutilizar liquidación ya calculada.
+4. Actualizar la tabla de este archivo al cerrar REM009.
 
 ## Qué no hacer al retomar
 
 - No volver a copiar modelos desde `otros/modelos/` (ya están en las apps).
 - No crear un modelo por mes o por año.
 - No hardcodear `FACTOR_HE` ni otras tasas; ya están en parámetros (`valor("FACTOR_HE", fecha)`).
-- No empezar el motor de liquidación (REM005) con datos simulados: ya están 001–004 y 006–008.
+- No rehacer REM005: el motor ya calcula con HE, movimientos y finiquitos reales.
+- No saltar a REM010 sin cerrar REM009.

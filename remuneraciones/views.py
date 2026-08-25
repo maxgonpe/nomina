@@ -20,12 +20,14 @@ from django.views.generic import (
 from core.mixins import AuditFormMixin
 from remuneraciones.forms import (
     ConceptoRemuneracionForm,
+    DiasFalladosForm,
     FiniquitoDocumentoForm,
     FiniquitoForm,
     HoraExtraCargaRapidaFormSet,
     HoraExtraForm,
     MovimientoCargaRapidaFormSet,
     MovimientoForm,
+    PagoRemuneracionForm,
     PeriodoForm,
     ReaperturaPeriodoForm,
 )
@@ -33,6 +35,7 @@ from remuneraciones.models import (
     ConceptoRemuneracion,
     Finiquito,
     HoraExtra,
+    LiquidacionMensual,
     MovimientoRemuneracion,
     PeriodoRemuneracion,
 )
@@ -46,6 +49,15 @@ from remuneraciones.services.finiquitos import (
 from remuneraciones.services.horas_extra import (
     suma_horas_extra,
     totales_horas_extra_por_trabajador,
+)
+from remuneraciones.services.liquidaciones import (
+    acciones_disponibles as acciones_liquidacion,
+    anular as anular_liquidacion,
+    calcular as calcular_liquidacion,
+    calcular_periodo,
+    marcar_pagada,
+    registrar_pago,
+    validar as validar_liquidacion,
 )
 from remuneraciones.services.movimientos import (
     eliminar_movimiento,
@@ -206,13 +218,31 @@ class PeriodoAbrirView(_PeriodoAccionMixin, View):
 
 class PeriodoCalcularView(_PeriodoAccionMixin, View):
     def ejecutar(self, periodo, usuario):
-        marcar_calculado(periodo, usuario=usuario)
+        calculadas, errores = calcular_periodo(periodo, usuario=usuario)
+        if errores:
+            raise ValidationError(" ".join(errores))
+        self._cantidad = len(calculadas)
+        self._marco_calculado = (
+            periodo.estado == PeriodoRemuneracion.Estado.ABIERTO
+        )
+        if self._marco_calculado:
+            marcar_calculado(periodo, usuario=usuario)
 
     def mensaje_ok(self, periodo):
-        return (
-            f"{periodo.nombre} marcado como calculado. "
-            "El motor de liquidación (REM005) usará este estado más adelante."
-        )
+        n = getattr(self, "_cantidad", 0)
+        if getattr(self, "_marco_calculado", False):
+            if n:
+                return (
+                    f"{periodo.nombre}: {n} liquidación(es) calculada(s). "
+                    "El período quedó marcado como calculado."
+                )
+            return (
+                f"{periodo.nombre}: no había trabajadores a liquidar. "
+                "El período quedó marcado como calculado."
+            )
+        if n:
+            return f"{periodo.nombre}: {n} liquidación(es) recalculada(s)."
+        return f"{periodo.nombre}: no había liquidaciones para recalcular."
 
 
 class PeriodoValidarView(_PeriodoAccionMixin, View):
@@ -1207,3 +1237,213 @@ class FiniquitoAccionView(
         except ValidationError as exc:
             messages.error(request, _mensaje_error(exc))
         return redirect("remuneraciones:finiquito_detalle", pk=pk)
+
+
+def _contexto_liquidacion(liquidacion, *, pago_form=None, dias_form=None):
+    movimientos = liquidacion.movimientos.select_related("concepto")
+    haberes = [m for m in movimientos if m.concepto.tipo == "HABER"]
+    descuentos = [m for m in movimientos if m.concepto.tipo == "DESCUENTO"]
+    return {
+        "liquidacion": liquidacion,
+        "acciones": acciones_liquidacion(liquidacion),
+        "haberes": haberes,
+        "descuentos": descuentos,
+        "pagos": liquidacion.pagos.all(),
+        "pago_form": pago_form or PagoRemuneracionForm(),
+        "dias_form": dias_form
+        or DiasFalladosForm(
+            initial={"dias_fallados": liquidacion.dias_fallados}
+        ),
+    }
+
+
+class LiquidacionListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
+    permission_required = "remuneraciones.view_liquidacionmensual"
+    model = LiquidacionMensual
+    paginate_by = 50
+    template_name = "remuneraciones/liquidaciones/lista.html"
+    context_object_name = "liquidaciones"
+
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related("trabajador", "periodo", "contrato")
+        )
+        trabajador_id = self.kwargs.get("trabajador_id") or self.request.GET.get(
+            "trabajador"
+        )
+        periodo_id = self.kwargs.get("periodo_id") or self.request.GET.get(
+            "periodo"
+        )
+        estado = self.request.GET.get("estado", "").strip()
+        if trabajador_id:
+            qs = qs.filter(trabajador_id=trabajador_id)
+        if periodo_id:
+            qs = qs.filter(periodo_id=periodo_id)
+        if estado:
+            qs = qs.filter(estado=estado)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q_trabajador"] = str(
+            self.kwargs.get("trabajador_id")
+            or self.request.GET.get("trabajador")
+            or ""
+        )
+        context["q_periodo"] = str(
+            self.kwargs.get("periodo_id")
+            or self.request.GET.get("periodo")
+            or ""
+        )
+        context["q_estado"] = self.request.GET.get("estado", "").strip()
+        context["trabajadores"] = Trabajador.objects.filter(
+            activo=True
+        ).order_by("nombre_completo")
+        context["periodos"] = PeriodoRemuneracion.objects.all()
+        context["estados"] = LiquidacionMensual.Estado.choices
+        context["trabajador"] = None
+        context["periodo"] = None
+        if self.kwargs.get("trabajador_id"):
+            context["trabajador"] = get_object_or_404(
+                Trabajador, pk=self.kwargs["trabajador_id"]
+            )
+        if self.kwargs.get("periodo_id"):
+            context["periodo"] = get_object_or_404(
+                PeriodoRemuneracion, pk=self.kwargs["periodo_id"]
+            )
+        return context
+
+
+class LiquidacionDetailView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DetailView,
+):
+    permission_required = "remuneraciones.view_liquidacionmensual"
+    model = LiquidacionMensual
+    template_name = "remuneraciones/liquidaciones/detalle.html"
+    context_object_name = "liquidacion"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            "trabajador",
+            "periodo",
+            "contrato",
+            "centro_costo",
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(_contexto_liquidacion(self.object))
+        return context
+
+
+class LiquidacionCalcularView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.change_liquidacionmensual"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        liquidacion = get_object_or_404(LiquidacionMensual, pk=pk)
+        dias = None
+        if "dias_fallados" in request.POST:
+            form = DiasFalladosForm(request.POST)
+            if not form.is_valid():
+                messages.error(
+                    request,
+                    " ".join(
+                        str(err)
+                        for errs in form.errors.values()
+                        for err in errs
+                    ),
+                )
+                return redirect(liquidacion)
+            dias = form.cleaned_data["dias_fallados"]
+        try:
+            calcular_liquidacion(
+                liquidacion.trabajador,
+                liquidacion.periodo,
+                usuario=request.user,
+                dias_fallados=dias,
+            )
+            messages.success(request, "Liquidación calculada.")
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+        return redirect(liquidacion)
+
+
+class LiquidacionAccionView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.change_liquidacionmensual"
+    accion = None
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        liquidacion = get_object_or_404(LiquidacionMensual, pk=pk)
+        try:
+            if self.accion == "validar":
+                validar_liquidacion(liquidacion, usuario=request.user)
+                messages.success(request, "Liquidación validada.")
+            elif self.accion == "anular":
+                anular_liquidacion(liquidacion, usuario=request.user)
+                messages.success(request, "Liquidación anulada.")
+            elif self.accion == "pagar":
+                marcar_pagada(liquidacion, usuario=request.user)
+                messages.success(request, "Liquidación marcada como pagada.")
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+        return redirect("remuneraciones:liquidacion_detalle", pk=pk)
+
+
+class LiquidacionPagoView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "remuneraciones.add_pagoremuneracion"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        liquidacion = get_object_or_404(
+            LiquidacionMensual.objects.select_related(
+                "trabajador",
+                "periodo",
+                "contrato",
+                "centro_costo",
+            ),
+            pk=pk,
+        )
+        form = PagoRemuneracionForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, "Revise los datos del pago.")
+            return render(
+                request,
+                "remuneraciones/liquidaciones/detalle.html",
+                _contexto_liquidacion(liquidacion, pago_form=form),
+            )
+        try:
+            registrar_pago(
+                liquidacion,
+                fecha=form.cleaned_data["fecha"],
+                monto=form.cleaned_data["monto"],
+                medio_pago=form.cleaned_data["medio_pago"],
+                referencia=form.cleaned_data.get("referencia") or "",
+                observaciones=form.cleaned_data.get("observaciones") or "",
+                usuario=request.user,
+            )
+            messages.success(request, "Pago registrado.")
+        except ValidationError as exc:
+            messages.error(request, _mensaje_error(exc))
+        return redirect("remuneraciones:liquidacion_detalle", pk=pk)

@@ -38,6 +38,14 @@ def valor(codigo, fecha):
     return registro.valor
 
 
+def valor_opcional(codigo, fecha):
+    """None si el parámetro no tiene monto vigente (p. ej. colación sin cargar)."""
+    try:
+        return valor(codigo, fecha)
+    except ValidationError:
+        return None
+
+
 def valor_hora_extra(sueldo_base, fecha):
     factor = valor(CODIGO_FACTOR_HE, fecha)
     return Decimal(sueldo_base) * factor

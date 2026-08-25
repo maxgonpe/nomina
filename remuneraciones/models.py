@@ -439,6 +439,9 @@ class LiquidacionMensual(AuditModel):
             f"{self.periodo}"
         )
 
+    def get_absolute_url(self):
+        return reverse("remuneraciones:liquidacion_detalle", args=[self.pk])
+
     def clean(self):
         super().clean()
         if self.periodo_id:
@@ -770,6 +773,20 @@ class PagoRemuneracion(AuditModel):
             f"{self.liquidacion} - "
             f"{self.monto}"
         )
+
+    def clean(self):
+        super().clean()
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+        if self.monto is not None and self.monto <= 0:
+            raise ValidationError(
+                {"monto": "El monto del pago debe ser mayor que 0."}
+            )
+
+    def save(self, *args, **kwargs):
+        if self.liquidacion_id:
+            bloquear_si_periodo_cerrado(self.liquidacion.periodo)
+        super().save(*args, **kwargs)
 
 
 def finiquito_upload_to(instance, filename):

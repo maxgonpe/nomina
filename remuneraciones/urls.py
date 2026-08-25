@@ -200,4 +200,49 @@ urlpatterns = [
         views.FiniquitoCreateView.as_view(),
         name="trabajador_finiquito_crear",
     ),
+    path(
+        "liquidaciones/",
+        views.LiquidacionListView.as_view(),
+        name="liquidacion_lista",
+    ),
+    path(
+        "liquidaciones/<int:pk>/",
+        views.LiquidacionDetailView.as_view(),
+        name="liquidacion_detalle",
+    ),
+    path(
+        "liquidaciones/<int:pk>/calcular/",
+        views.LiquidacionCalcularView.as_view(),
+        name="liquidacion_calcular",
+    ),
+    path(
+        "liquidaciones/<int:pk>/validar/",
+        views.LiquidacionAccionView.as_view(accion="validar"),
+        name="liquidacion_validar",
+    ),
+    path(
+        "liquidaciones/<int:pk>/anular/",
+        views.LiquidacionAccionView.as_view(accion="anular"),
+        name="liquidacion_anular",
+    ),
+    path(
+        "liquidaciones/<int:pk>/pagar/",
+        views.LiquidacionAccionView.as_view(accion="pagar"),
+        name="liquidacion_pagar",
+    ),
+    path(
+        "liquidaciones/<int:pk>/pagos/",
+        views.LiquidacionPagoView.as_view(),
+        name="liquidacion_pago",
+    ),
+    path(
+        "periodos/<int:periodo_id>/liquidaciones/",
+        views.LiquidacionListView.as_view(),
+        name="periodo_liquidaciones",
+    ),
+    path(
+        "trabajadores/<int:trabajador_id>/liquidaciones/",
+        views.LiquidacionListView.as_view(),
+        name="trabajador_liquidaciones",
+    ),
 ]

@@ -241,3 +241,70 @@ def totales_movimientos_periodo(periodo):
         .annotate(total=Sum("monto"))
         .order_by("liquidacion__trabajador__nombre_completo")
     )
+
+
+def upsert_movimiento_sistema(
+    *,
+    liquidacion,
+    codigo,
+    monto,
+    descripcion="",
+    usuario=None,
+):
+    """
+    Crea o actualiza un movimiento CALCULADO. Si hay uno MANUAL del mismo
+    concepto, no lo pisa. Monto 0 elimina el automático.
+    """
+    try:
+        concepto = ConceptoRemuneracion.objects.get(codigo=codigo)
+    except ConceptoRemuneracion.DoesNotExist as exc:
+        raise ValidationError(
+            f"Falta el concepto {codigo} en el catálogo."
+        ) from exc
+
+    if MovimientoRemuneracion.objects.filter(
+        liquidacion=liquidacion,
+        concepto=concepto,
+        origen=MovimientoRemuneracion.Origen.MANUAL,
+    ).exists():
+        return None
+
+    monto = dinero(monto) or Decimal("0.00")
+    existente = (
+        MovimientoRemuneracion.objects.filter(
+            liquidacion=liquidacion,
+            concepto=concepto,
+            origen=MovimientoRemuneracion.Origen.CALCULADO,
+        )
+        .order_by("id")
+        .first()
+    )
+    liquidacion.periodo.assert_editable()
+    if monto <= 0:
+        if existente:
+            MovimientoRemuneracion.objects.filter(pk=existente.pk).delete()
+        return None
+    if existente:
+        MovimientoRemuneracion.objects.filter(pk=existente.pk).update(
+            monto=monto,
+            descripcion=descripcion or "",
+            generado_automaticamente=True,
+            bloqueado=True,
+            actualizado_por=usuario,
+        )
+        existente.refresh_from_db()
+        return existente
+    movimiento = MovimientoRemuneracion(
+        liquidacion=liquidacion,
+        concepto=concepto,
+        monto=monto,
+        origen=MovimientoRemuneracion.Origen.CALCULADO,
+        descripcion=descripcion or "",
+        generado_automaticamente=True,
+        bloqueado=True,
+        creado_por=usuario,
+        actualizado_por=usuario,
+    )
+    movimiento.full_clean()
+    movimiento.save()
+    return movimiento

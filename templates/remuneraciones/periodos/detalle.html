@@ -19,6 +19,9 @@
     {% if perms.remuneraciones.view_finiquito %}
       <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_finiquitos' periodo.pk %}">Finiquitos</a>
     {% endif %}
+    {% if perms.remuneraciones.view_liquidacionmensual %}
+      <a class="btn btn-outline-primary" href="{% url 'remuneraciones:periodo_liquidaciones' periodo.pk %}">Liquidaciones</a>
+    {% endif %}
     <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:periodo_lista' %}">Volver</a>
   </div>
 </div>
@@ -58,10 +61,12 @@
       <button class="btn btn-primary" type="submit">Abrir período</button>
     </form>
   {% endif %}
-  {% if acciones.marcar_calculado %}
+  {% if acciones.calcular_liquidaciones %}
     <form method="post" action="{% url 'remuneraciones:periodo_calcular' periodo.pk %}" class="d-inline">
       {% csrf_token %}
-      <button class="btn btn-outline-primary" type="submit">Marcar calculado</button>
+      <button class="btn btn-outline-primary" type="submit">
+        {% if acciones.marcar_calculado %}Calcular liquidaciones{% else %}Recalcular liquidaciones{% endif %}
+      </button>
     </form>
   {% endif %}
   {% if acciones.validar %}
@@ -87,7 +92,9 @@
         <tr>
           <th>Trabajador</th>
           <th>Estado</th>
+          <th class="text-end">Total a pagar</th>
           <th>Requiere recálculo</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -95,10 +102,16 @@
           <tr>
             <td>{{ liquidacion.trabajador }}</td>
             <td>{{ liquidacion.get_estado_display }}</td>
+            <td class="text-end">{{ liquidacion.total_a_pagar }}</td>
             <td>{% if liquidacion.requiere_recalculo %}Sí{% else %}No{% endif %}</td>
+            <td>
+              {% if perms.remuneraciones.view_liquidacionmensual %}
+                <a href="{% url 'remuneraciones:liquidacion_detalle' liquidacion.pk %}">Ver</a>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="3" class="text-muted">Aún no hay liquidaciones (REM005).</td></tr>
+          <tr><td colspan="5" class="text-muted">Aún no hay liquidaciones. Ábralas con «Calcular liquidaciones».</td></tr>
         {% endfor %}
       </tbody>
     </table>

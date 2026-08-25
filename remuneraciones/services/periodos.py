@@ -19,6 +19,11 @@ def acciones_disponibles(periodo):
     return {
         "abrir": periodo.estado == Estado.BORRADOR,
         "marcar_calculado": periodo.estado == Estado.ABIERTO,
+        "calcular_liquidaciones": periodo.estado in (
+            Estado.ABIERTO,
+            Estado.CALCULADO,
+            Estado.VALIDADO,
+        ),
         "validar": periodo.estado == Estado.CALCULADO,
         "cerrar": periodo.estado == Estado.VALIDADO,
         "reabrir": periodo.estado == Estado.CERRADO,

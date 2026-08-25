@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Liquidación {{ liquidacion.trabajador.nombre_completo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ liquidacion.trabajador.nombre_completo }}</h1>
+    <p class="text-muted mb-0">
+      {{ liquidacion.periodo.nombre }} · {{ liquidacion.get_estado_display }}
+      {% if liquidacion.requiere_recalculo %}
+        <span class="badge text-bg-warning">requiere recálculo</span>
+      {% endif %}
+    </p>
+  </div>
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary" href="{% url 'remuneraciones:liquidacion_lista' %}">Volver</a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Trabajador</dt>
+      <dd class="col-sm-9">
+        <a href="{% url 'rrhh:trabajador_detalle' liquidacion.trabajador_id %}">{{ liquidacion.trabajador.nombre_completo }}</a>
+      </dd>
+      <dt class="col-sm-3">Período</dt>
+      <dd class="col-sm-9">
+        <a href="{% url 'remuneraciones:periodo_detalle' liquidacion.periodo_id %}">{{ liquidacion.periodo.nombre }}</a>
+      </dd>
+      <dt class="col-sm-3">Sueldo (snapshot)</dt>
+      <dd class="col-sm-9">{{ liquidacion.sueldo_base_snapshot }}</dd>
+      <dt class="col-sm-3">Cargo (snapshot)</dt>
+      <dd class="col-sm-9">
+        {% if liquidacion.cargo_codigo_snapshot %}
+          {{ liquidacion.cargo_codigo_snapshot }} — {{ liquidacion.cargo_nombre_snapshot }}
+        {% else %}
+          —
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Centro de costo (snapshot)</dt>
+      <dd class="col-sm-9">
+        {% if liquidacion.centro_costo_codigo_snapshot %}
+          {{ liquidacion.centro_costo_codigo_snapshot }} — {{ liquidacion.centro_costo_nombre_snapshot }}
+        {% else %}
+          —
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Días</dt>
+      <dd class="col-sm-9">
+        Trabajados {{ liquidacion.dias_trabajados }} · fallados {{ liquidacion.dias_fallados }} · valor día {{ liquidacion.valor_dia }}
+      </dd>
+      <dt class="col-sm-3">Horas extra</dt>
+      <dd class="col-sm-9">
+        {{ liquidacion.horas_extra_total }} h × {{ liquidacion.valor_hora_extra }} = {{ liquidacion.monto_horas_extra }}
+      </dd>
+      <dt class="col-sm-3">Versión de cálculo</dt>
+      <dd class="col-sm-9">
+        {{ liquidacion.version_calculo }}
+        {% if liquidacion.calculado_en %}· {{ liquidacion.calculado_en|date:"d-m-Y H:i" }}{% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+
+{% if acciones.calcular and perms.remuneraciones.change_liquidacionmensual %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" action="{% url 'remuneraciones:liquidacion_calcular' liquidacion.pk %}" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-3">
+        <label class="form-label" for="{{ dias_form.dias_fallados.id_for_label }}">{{ dias_form.dias_fallados.label }}</label>
+        {{ dias_form.dias_fallados }}
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary" type="submit">Calcular / recalcular</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if perms.remuneraciones.change_liquidacionmensual %}
+<div class="mb-4">
+  {% if acciones.validar %}
+    <form method="post" action="{% url 'remuneraciones:liquidacion_validar' liquidacion.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">Validar</button>
+    </form>
+  {% endif %}
+  {% if acciones.pagar %}
+    <form method="post" action="{% url 'remuneraciones:liquidacion_pagar' liquidacion.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-primary" type="submit">Marcar pagada</button>
+    </form>
+  {% endif %}
+  {% if acciones.anular %}
+    <form method="post" action="{% url 'remuneraciones:liquidacion_anular' liquidacion.pk %}" class="d-inline" onsubmit="return confirm('¿Anular esta liquidación?');">
+      {% csrf_token %}
+      <button class="btn btn-outline-danger" type="submit">Anular</button>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-6">
+    <h2 class="h5">Haberes</h2>
+    <div class="card shadow-sm mb-4">
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Concepto</th>
+              <th>Origen</th>
+              <th class="text-end">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in haberes %}
+              <tr>
+                <td>
+                  {{ item.concepto.nombre }}
+                  {% if item.descripcion %}<div class="small text-muted">{{ item.descripcion }}</div>{% endif %}
+                </td>
+                <td>{{ item.get_origen_display }}</td>
+                <td class="text-end">{{ item.monto }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3" class="text-muted">Sin haberes.</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="2">Total haberes</th>
+              <th class="text-end">{{ liquidacion.total_haberes }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <h2 class="h5">Descuentos</h2>
+    <div class="card shadow-sm mb-4">
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Concepto</th>
+              <th>Origen</th>
+              <th class="text-end">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in descuentos %}
+              <tr>
+                <td>
+                  {{ item.concepto.nombre }}
+                  {% if item.descripcion %}<div class="small text-muted">{{ item.descripcion }}</div>{% endif %}
+                </td>
+                <td>{{ item.get_origen_display }}</td>
+                <td class="text-end">{{ item.monto }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3" class="text-muted">Sin descuentos.</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="2">Total descuentos</th>
+              <th class="text-end">{{ liquidacion.total_descuentos }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Total liquidado</dt>
+      <dd class="col-sm-9">{{ liquidacion.total_liquidado }}</dd>
+      <dt class="col-sm-3">Total a pagar</dt>
+      <dd class="col-sm-9">{{ liquidacion.total_a_pagar }}</dd>
+      <dt class="col-sm-3">Pagado</dt>
+      <dd class="col-sm-9">{{ liquidacion.total_pagado }}</dd>
+      <dt class="col-sm-3">Saldo</dt>
+      <dd class="col-sm-9">{{ liquidacion.saldo_pendiente }}</dd>
+    </dl>
+  </div>
+</div>
+
+<h2 class="h5">Pagos</h2>
+<div class="card shadow-sm mb-4">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Fecha</th>
+          <th>Medio</th>
+          <th>Referencia</th>
+          <th class="text-end">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pago in pagos %}
+          <tr>
+            <td>{{ pago.fecha|date:"d-m-Y" }}</td>
+            <td>{{ pago.get_medio_pago_display }}</td>
+            <td>{{ pago.referencia|default:"—" }}</td>
+            <td class="text-end">{{ pago.monto }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="text-muted">Sin pagos. PAGADA solo se marca si hay al menos un pago registrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if acciones.pago and perms.remuneraciones.add_pagoremuneracion %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Registrar pago</div>
+  <div class="card-body">
+    <form method="post" action="{% url 'remuneraciones:liquidacion_pago' liquidacion.pk %}">
+      {% csrf_token %}
+      {{ pago_form.non_field_errors }}
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label" for="{{ pago_form.fecha.id_for_label }}">Fecha</label>
+          {{ pago_form.fecha }}
+          {{ pago_form.fecha.errors }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="{{ pago_form.monto.id_for_label }}">Monto</label>
+          {{ pago_form.monto }}
+          {{ pago_form.monto.errors }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="{{ pago_form.medio_pago.id_for_label }}">Medio</label>
+          {{ pago_form.medio_pago }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="{{ pago_form.referencia.id_for_label }}">Referencia</label>
+          {{ pago_form.referencia }}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="{{ pago_form.observaciones.id_for_label }}">Observaciones</label>
+          {{ pago_form.observaciones }}
+        </div>
+      </div>
+      <button class="btn btn-primary mt-3" type="submit">Registrar pago</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
