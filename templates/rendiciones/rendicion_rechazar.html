@@ -1,18 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Anular rendición #{{ rendicion.pk }}{% endblock %}
+{% block title %}Rechazar rendición #{{ rendicion.pk }}{% endblock %}
 {% block content %}
-<h1 class="h3 mb-3">Anular rendición #{{ rendicion.pk }}</h1>
+<h1 class="h3 mb-3">Rechazar rendición #{{ rendicion.pk }}</h1>
 <div class="card shadow-sm">
   <div class="card-body">
-    <p>
-      Se anulará la rendición de
-      <strong>{{ rendicion.trabajador.nombre_completo }}</strong>
-      del {{ rendicion.fecha|date:"d-m-Y" }}
-      ({{ rendicion.descripcion }}).
-      Estado actual: <strong>{{ rendicion.get_estado_display }}</strong>.
-      El registro se conserva; no se elimina.
-    </p>
-    {% if puede_anular %}
+    <p>{{ rendicion.trabajador.nombre_completo }} · {{ rendicion.descripcion }}</p>
+    {% if puede_rechazar %}
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="mb-3">
@@ -20,11 +13,11 @@
           {{ form.motivo }}
           {% if form.motivo.errors %}<div class="text-danger small">{{ form.motivo.errors }}</div>{% endif %}
         </div>
-        <button class="btn btn-danger" type="submit">Confirmar anulación</button>
+        <button class="btn btn-warning" type="submit">Confirmar rechazo</button>
         <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
       </form>
     {% else %}
-      <div class="alert alert-warning">No se puede anular en el estado actual.</div>
+      <div class="alert alert-warning">Solo una rendición presentada puede rechazarse.</div>
       <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Volver</a>
     {% endif %}
   </div>

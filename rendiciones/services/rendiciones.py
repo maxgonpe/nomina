@@ -6,37 +6,12 @@ from django.db import transaction
 from rendiciones.models import Rendicion, RendicionDetalle
 
 
-def anular(rendicion, usuario=None, motivo=""):
-    """
-    Anula una rendición en BORRADOR (REN001).
-    Transiciones formales del resto del flujo: REN005.
-    """
-    if rendicion.estado == Rendicion.Estado.ANULADA:
-        raise ValidationError("La rendición ya está anulada.")
-    if rendicion.estado != Rendicion.Estado.BORRADOR:
-        raise ValidationError(
-            "Solo se puede anular un borrador desde este módulo. "
-            "El flujo completo de anulación se define en REN005."
-        )
-    rendicion.estado = Rendicion.Estado.ANULADA
-    if motivo:
-        texto = (rendicion.observaciones or "").strip()
-        bloque = f"Anulación: {motivo.strip()}"
-        rendicion.observaciones = f"{texto}\n{bloque}".strip() if texto else bloque
-    if usuario is not None:
-        rendicion.actualizado_por = usuario
-    update_fields = ["estado", "observaciones", "actualizado_por", "actualizado_en"]
-    rendicion.save(update_fields=update_fields)
-    return rendicion
-
-
 def puede_editar(rendicion):
-    """Cabecera y detalles: BORRADOR (RECHAZADA se habilitará en REN005)."""
+    """Cabecera, detalles y docs: solo BORRADOR (RECHAZADA requiere reabrir)."""
     return rendicion.estado == Rendicion.Estado.BORRADOR
 
 
 def puede_editar_documentos(rendicion):
-    """Respaldos alterables solo en estados editables (REN004)."""
     return puede_editar(rendicion)
 
 
@@ -93,21 +68,6 @@ def puede_presentar(rendicion):
     except ValidationError:
         return False
     return True
-
-
-@transaction.atomic
-def presentar(rendicion, usuario=None):
-    """Pasa BORRADOR → PRESENTADA solo si cuadra (REN003)."""
-    if rendicion.estado != Rendicion.Estado.BORRADOR:
-        raise ValidationError(
-            "Solo una rendición en borrador puede presentarse."
-        )
-    validar_cuadratura(rendicion)
-    rendicion.estado = Rendicion.Estado.PRESENTADA
-    if usuario is not None:
-        rendicion.actualizado_por = usuario
-    rendicion.save(update_fields=["estado", "actualizado_por", "actualizado_en"])
-    return rendicion
 
 
 @transaction.atomic
@@ -206,3 +166,13 @@ def eliminar_documento(documento, usuario=None):
         rendicion.actualizado_por = usuario
         rendicion.save(update_fields=["actualizado_por", "actualizado_en"])
     return rendicion
+
+
+# Reexportar transiciones REN005 para imports históricos.
+from rendiciones.services.estados import (  # noqa: E402
+    anular,
+    aprobar,
+    presentar,
+    reabrir,
+    rechazar,
+)

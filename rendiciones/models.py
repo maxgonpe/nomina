@@ -64,9 +64,18 @@ class Rendicion(AuditModel):
         blank=True,
     )
 
+    motivo_rechazo = models.TextField(
+        blank=True,
+    )
+
     class Meta:
         ordering = ["-fecha"]
-
+        permissions = [
+            ("presentar_rendicion", "Puede presentar rendiciones"),
+            ("aprobar_rendicion", "Puede aprobar rendiciones"),
+            ("rechazar_rendicion", "Puede rechazar rendiciones"),
+            ("anular_rendicion", "Puede anular rendiciones"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=Q(total_declarado__gte=0),

@@ -95,6 +95,7 @@ class CuadraturaVistaTests(TestCase):
             codename__in=[
                 "view_rendicion",
                 "change_rendicion",
+                "presentar_rendicion",
             ],
         )
         self.user.user_permissions.set(perms)

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Reabrir rendición #{{ rendicion.pk }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Reabrir rendición #{{ rendicion.pk }}</h1>
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <p>
+      La rendición volverá a <strong>Borrador</strong> para corregir cabecera,
+      distribución o documentos.
+    </p>
+    {% if rendicion.motivo_rechazo %}
+      <p class="mb-0"><strong>Motivo del rechazo:</strong> {{ rendicion.motivo_rechazo }}</p>
+    {% endif %}
+  </div>
+</div>
+{% if puede_reabrir %}
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-primary" type="submit">Reabrir como borrador</button>
+    <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
+  </form>
+{% else %}
+  <div class="alert alert-warning">Solo una rendición rechazada puede reabrirse.</div>
+  <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Volver</a>
+{% endif %}
+{% endblock %}

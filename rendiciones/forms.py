@@ -207,3 +207,31 @@ class DocumentoRendicionForm(forms.ModelForm):
                 "El archivo no puede superar los 10 MB."
             )
         return archivo
+
+
+class RechazarRendicionForm(forms.Form):
+    motivo = forms.CharField(
+        label="Motivo del rechazo",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        min_length=3,
+    )
+
+    def clean_motivo(self):
+        motivo = (self.cleaned_data.get("motivo") or "").strip()
+        if not motivo:
+            raise ValidationError("El motivo de rechazo es obligatorio.")
+        return motivo
+
+
+class AnularRendicionForm(forms.Form):
+    motivo = forms.CharField(
+        label="Motivo de anulación",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        min_length=3,
+    )
+
+    def clean_motivo(self):
+        motivo = (self.cleaned_data.get("motivo") or "").strip()
+        if not motivo:
+            raise ValidationError("El motivo de anulación es obligatorio.")
+        return motivo

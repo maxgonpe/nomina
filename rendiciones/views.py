@@ -16,19 +16,27 @@ from django.views.generic import (
 
 from core.mixins import AuditFormMixin
 from rendiciones.forms import (
+    AnularRendicionForm,
     DocumentoRendicionForm,
+    RechazarRendicionForm,
     RendicionDetalleFormSet,
     RendicionForm,
 )
 from rendiciones.models import DocumentoRendicion, Rendicion
-from rendiciones.services.rendiciones import (
+from rendiciones.services.estados import (
+    acciones_disponibles,
     anular,
+    aprobar,
+    presentar,
+    reabrir,
+    rechazar,
+)
+from rendiciones.services.rendiciones import (
     eliminar_documento,
     guardar_distribucion,
     puede_editar,
     puede_editar_documentos,
     puede_presentar,
-    presentar,
     validar_cuadratura,
 )
 from rrhh.models import Trabajador
@@ -111,10 +119,15 @@ class RendicionDetailView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["puede_editar"] = puede_editar(self.object)
+        acciones = acciones_disponibles(self.object)
+        context["acciones"] = acciones
+        context["puede_editar"] = acciones["editar"]
         context["puede_editar_documentos"] = puede_editar_documentos(self.object)
-        context["puede_anular"] = self.object.estado == Rendicion.Estado.BORRADOR
-        context["puede_presentar"] = puede_presentar(self.object)
+        context["puede_presentar"] = acciones["presentar"]
+        context["puede_aprobar"] = acciones["aprobar"]
+        context["puede_rechazar"] = acciones["rechazar"]
+        context["puede_reabrir"] = acciones["reabrir"]
+        context["puede_anular"] = acciones["anular"]
         context["detalles"] = self.object.detalles.select_related("centro_costo")
         context["documentos"] = self.object.documentos.all()
         try:
@@ -224,24 +237,43 @@ class RendicionAnularView(
     PermissionRequiredMixin,
     View,
 ):
-    permission_required = "rendiciones.change_rendicion"
+    permission_required = "rendiciones.anular_rendicion"
 
     def get(self, request, pk):
         rendicion = get_object_or_404(
             Rendicion.objects.select_related("trabajador"),
             pk=pk,
         )
+        form = AnularRendicionForm()
         return render(
             request,
             "rendiciones/rendicion_anular.html",
-            {"rendicion": rendicion},
+            {
+                "rendicion": rendicion,
+                "form": form,
+                "puede_anular": acciones_disponibles(rendicion)["anular"],
+            },
         )
 
     def post(self, request, pk):
         rendicion = get_object_or_404(Rendicion, pk=pk)
-        motivo = request.POST.get("motivo", "").strip()
+        form = AnularRendicionForm(request.POST)
+        if not form.is_valid():
+            return render(
+                request,
+                "rendiciones/rendicion_anular.html",
+                {
+                    "rendicion": rendicion,
+                    "form": form,
+                    "puede_anular": acciones_disponibles(rendicion)["anular"],
+                },
+            )
         try:
-            anular(rendicion, usuario=request.user, motivo=motivo)
+            anular(
+                rendicion,
+                motivo=form.cleaned_data["motivo"],
+                usuario=request.user,
+            )
         except ValidationError as exc:
             messages.error(request, "; ".join(exc.messages))
             return redirect("rendiciones:rendicion_detalle", pk=pk)
@@ -254,9 +286,9 @@ class RendicionPresentarView(
     PermissionRequiredMixin,
     View,
 ):
-    """Confirmación (GET) + cambio de estado solo por POST (REN003)."""
+    """Confirmación (GET) + cambio de estado solo por POST (REN003/REN005)."""
 
-    permission_required = "rendiciones.change_rendicion"
+    permission_required = "rendiciones.presentar_rendicion"
 
     def get(self, request, pk):
         rendicion = get_object_or_404(
@@ -294,6 +326,121 @@ class RendicionPresentarView(
         messages.success(
             request,
             f"Rendición #{pk} presentada. Queda pendiente de aprobación.",
+        )
+        return redirect("rendiciones:rendicion_detalle", pk=pk)
+
+
+class RendicionAprobarView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "rendiciones.aprobar_rendicion"
+
+    def get(self, request, pk):
+        rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=pk,
+        )
+        return render(
+            request,
+            "rendiciones/rendicion_aprobar.html",
+            {
+                "rendicion": rendicion,
+                "puede_aprobar": acciones_disponibles(rendicion)["aprobar"],
+            },
+        )
+
+    def post(self, request, pk):
+        rendicion = get_object_or_404(Rendicion, pk=pk)
+        try:
+            aprobar(rendicion, usuario=request.user)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("rendiciones:rendicion_detalle", pk=pk)
+        messages.success(request, f"Rendición #{pk} aprobada.")
+        return redirect("rendiciones:rendicion_detalle", pk=pk)
+
+
+class RendicionRechazarView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "rendiciones.rechazar_rendicion"
+
+    def get(self, request, pk):
+        rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=pk,
+        )
+        return render(
+            request,
+            "rendiciones/rendicion_rechazar.html",
+            {
+                "rendicion": rendicion,
+                "form": RechazarRendicionForm(),
+                "puede_rechazar": acciones_disponibles(rendicion)["rechazar"],
+            },
+        )
+
+    def post(self, request, pk):
+        rendicion = get_object_or_404(Rendicion, pk=pk)
+        form = RechazarRendicionForm(request.POST)
+        if not form.is_valid():
+            return render(
+                request,
+                "rendiciones/rendicion_rechazar.html",
+                {
+                    "rendicion": rendicion,
+                    "form": form,
+                    "puede_rechazar": acciones_disponibles(rendicion)["rechazar"],
+                },
+            )
+        try:
+            rechazar(
+                rendicion,
+                motivo=form.cleaned_data["motivo"],
+                usuario=request.user,
+            )
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("rendiciones:rendicion_detalle", pk=pk)
+        messages.success(request, f"Rendición #{pk} rechazada.")
+        return redirect("rendiciones:rendicion_detalle", pk=pk)
+
+
+class RendicionReabrirView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "rendiciones.change_rendicion"
+
+    def get(self, request, pk):
+        rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=pk,
+        )
+        return render(
+            request,
+            "rendiciones/rendicion_reabrir.html",
+            {
+                "rendicion": rendicion,
+                "puede_reabrir": acciones_disponibles(rendicion)["reabrir"],
+            },
+        )
+
+    def post(self, request, pk):
+        rendicion = get_object_or_404(Rendicion, pk=pk)
+        try:
+            reabrir(rendicion, usuario=request.user)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("rendiciones:rendicion_detalle", pk=pk)
+        messages.success(
+            request,
+            f"Rendición #{pk} reabierta como borrador.",
         )
         return redirect("rendiciones:rendicion_detalle", pk=pk)
 

@@ -41,6 +41,21 @@ urlpatterns = [
         name="rendicion_presentar",
     ),
     path(
+        "<int:pk>/aprobar/",
+        views.RendicionAprobarView.as_view(),
+        name="rendicion_aprobar",
+    ),
+    path(
+        "<int:pk>/rechazar/",
+        views.RendicionRechazarView.as_view(),
+        name="rendicion_rechazar",
+    ),
+    path(
+        "<int:pk>/reabrir/",
+        views.RendicionReabrirView.as_view(),
+        name="rendicion_reabrir",
+    ),
+    path(
         "<int:pk>/documentos/agregar/",
         views.DocumentoRendicionCreateView.as_view(),
         name="documento_agregar",

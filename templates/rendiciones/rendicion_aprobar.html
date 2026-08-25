@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Aprobar rendición #{{ rendicion.pk }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Aprobar rendición #{{ rendicion.pk }}</h1>
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <p class="mb-2">{{ rendicion.trabajador.nombre_completo }} · {{ rendicion.descripcion }}</p>
+    <dl class="row mb-0">
+      <dt class="col-sm-4">Total declarado</dt>
+      <dd class="col-sm-8">{{ rendicion.total_declarado }}</dd>
+      <dt class="col-sm-4">Total distribuido</dt>
+      <dd class="col-sm-8">{{ rendicion.total_distribuido }}</dd>
+      <dt class="col-sm-4">Estado</dt>
+      <dd class="col-sm-8">{{ rendicion.get_estado_display }}</dd>
+    </dl>
+  </div>
+</div>
+{% if puede_aprobar %}
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-success" type="submit">Confirmar aprobación</button>
+    <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
+  </form>
+{% else %}
+  <div class="alert alert-warning">Solo una rendición presentada puede aprobarse.</div>
+  <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Volver</a>
+{% endif %}
+{% endblock %}

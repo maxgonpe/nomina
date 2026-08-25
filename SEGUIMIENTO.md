@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al cerrar **REN004** (documentos y respaldos).
+Punto de corte: **25 de agosto de 2026**, al cerrar **REN005** (flujo de aprobación).
 
-Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN004.
+Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN005.
 
 ## Dónde estamos
 
@@ -22,9 +22,9 @@ Orden ejecutado: `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 �
 | REN001 Registro de rendición | Hecho |
 | REN002 Distribución por centro de costo | Hecho |
 | REN003 Validación y cuadratura | Hecho |
-| REN004 Documentos y respaldos | **Hecho** |
-| REN005 Flujo de aprobación | **Siguiente** |
-| REN006 Consultas, filtros y reportes | Pendiente |
+| REN004 Documentos y respaldos | Hecho |
+| REN005 Flujo de aprobación | **Hecho** |
+| REN006 Consultas, filtros y reportes | **Siguiente** |
 | REN007 Preparación Finanzas e integración Excel | Pendiente |
 
 Orden del Bloque 2:
@@ -69,6 +69,16 @@ Modelos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`
 - UI: sección en ficha; `/rendiciones/<pk>/documentos/agregar/` · `/documentos/<pk>/eliminar/`
 - Alta/baja solo en BORRADOR (`puede_editar_documentos`); migración `0002_documento_upload_to`
 - Tests: `rendiciones/test_documentos.py` — **7 OK** (suite rendiciones **40 OK**)
+
+### REN005 — Flujo de aprobación (hecho)
+
+- `services/estados.py`: presentar / aprobar / rechazar / reabrir / anular + `acciones_disponibles`
+- Transiciones: BORRADOR→PRESENTADA→APROBADA|RECHAZADA→(reabrir)BORRADOR; anular desde borrador/presentada/rechazada
+- Campo `motivo_rechazo`; motivo obligatorio en rechazo y anulación
+- Permisos: `presentar_rendicion`, `aprobar_rendicion`, `rechazar_rendicion`, `anular_rendicion`
+- URLs: `/presentar/` `/aprobar/` `/rechazar/` `/reabrir/` `/anular/` (cambio de estado solo POST)
+- Migración `0003_flujo_aprobacion`
+- Tests: `rendiciones/test_estados.py` — **11 OK** (suite rendiciones **52 OK**)
 
 ## Qué quedó construido (Bloque 1 — no rehacer)
 
@@ -130,9 +140,9 @@ python manage.py runserver 127.0.0.1:8000
 ```
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
-- Primera tarea: **REN005 — Flujo de aprobación**
-  1. Leer `otros/mini-especificaciones/REN/REN005 — Flujo de aprobación.docx`
-  2. Transiciones + permisos presentar/aprobar/rechazar/anular/reabrir
+- Primera tarea: **REN006 — Consultas, filtros y reportes**
+  1. Leer `otros/mini-especificaciones/REN/REN006 — Consultas, filtros y reportes.docx`
+  2. `services/reportes.py`; resumen por CC; `filas_exportacion()`
   3. Tests; actualizar esta tabla y el skill
 
 ## Roadmap de bloques (sistema completo)

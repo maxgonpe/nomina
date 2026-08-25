@@ -68,11 +68,15 @@ class RendicionServicioTests(TestCase):
         self.assertEqual(self.rendicion.actualizado_por, self.user)
         self.assertEqual(Rendicion.objects.count(), 1)
 
-    def test_no_anula_si_no_es_borrador(self):
-        self.rendicion.estado = Rendicion.Estado.PRESENTADA
+    def test_no_anula_sin_motivo(self):
+        with self.assertRaises(ValidationError):
+            anular(self.rendicion, usuario=self.user, motivo="")
+
+    def test_no_anula_si_aprobada(self):
+        self.rendicion.estado = Rendicion.Estado.APROBADA
         self.rendicion.save(update_fields=["estado"])
         with self.assertRaises(ValidationError):
-            anular(self.rendicion, usuario=self.user)
+            anular(self.rendicion, usuario=self.user, motivo="No debería")
 
 
 class RendicionVistaTests(TestCase):
