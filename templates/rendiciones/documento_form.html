@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Adjuntar documento — Rendición #{{ rendicion.pk }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Adjuntar documento — Rendición #{{ rendicion.pk }}</h1>
+<p class="text-muted">{{ rendicion.trabajador.nombre_completo }} · {{ rendicion.descripcion }}</p>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo</label>
+        {{ form.tipo }}
+        {% if form.tipo.errors %}<div class="text-danger small">{{ form.tipo.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.archivo.id_for_label }}">Archivo</label>
+        {{ form.archivo }}
+        <div class="form-text">PDF, JPG o PNG · máximo 10 MB</div>
+        {% if form.archivo.errors %}<div class="text-danger small">{{ form.archivo.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+        {{ form.descripcion }}
+      </div>
+      <button class="btn btn-primary" type="submit">Subir</button>
+      <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -40,4 +40,14 @@ urlpatterns = [
         views.RendicionPresentarView.as_view(),
         name="rendicion_presentar",
     ),
+    path(
+        "<int:pk>/documentos/agregar/",
+        views.DocumentoRendicionCreateView.as_view(),
+        name="documento_agregar",
+    ),
+    path(
+        "documentos/<int:pk>/eliminar/",
+        views.DocumentoRendicionDeleteView.as_view(),
+        name="documento_eliminar",
+    ),
 ]

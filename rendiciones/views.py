@@ -15,18 +15,23 @@ from django.views.generic import (
 )
 
 from core.mixins import AuditFormMixin
-from rendiciones.forms import RendicionDetalleFormSet, RendicionForm
-from rendiciones.models import Rendicion
+from rendiciones.forms import (
+    DocumentoRendicionForm,
+    RendicionDetalleFormSet,
+    RendicionForm,
+)
+from rendiciones.models import DocumentoRendicion, Rendicion
 from rendiciones.services.rendiciones import (
     anular,
+    eliminar_documento,
     guardar_distribucion,
     puede_editar,
+    puede_editar_documentos,
     puede_presentar,
     presentar,
     validar_cuadratura,
 )
 from rrhh.models import Trabajador
-
 
 class RendicionListView(
     LoginRequiredMixin,
@@ -101,15 +106,17 @@ class RendicionDetailView(
                 "creado_por",
                 "actualizado_por",
             )
-            .prefetch_related("detalles__centro_costo")
+            .prefetch_related("detalles__centro_costo", "documentos")
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["puede_editar"] = puede_editar(self.object)
+        context["puede_editar_documentos"] = puede_editar_documentos(self.object)
         context["puede_anular"] = self.object.estado == Rendicion.Estado.BORRADOR
         context["puede_presentar"] = puede_presentar(self.object)
         context["detalles"] = self.object.detalles.select_related("centro_costo")
+        context["documentos"] = self.object.documentos.all()
         try:
             validar_cuadratura(self.object)
             context["cuadratura_ok"] = True
@@ -289,3 +296,87 @@ class RendicionPresentarView(
             f"Rendición #{pk} presentada. Queda pendiente de aprobación.",
         )
         return redirect("rendiciones:rendicion_detalle", pk=pk)
+
+
+class DocumentoRendicionCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    CreateView,
+):
+    permission_required = "rendiciones.add_documentorendicion"
+    model = DocumentoRendicion
+    form_class = DocumentoRendicionForm
+    template_name = "rendiciones/documento_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=kwargs["pk"],
+        )
+        if not puede_editar_documentos(self.rendicion):
+            messages.error(
+                request,
+                "No se pueden agregar documentos en este estado.",
+            )
+            return redirect(
+                "rendiciones:rendicion_detalle",
+                pk=self.rendicion.pk,
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.rendicion = self.rendicion
+        messages.success(self.request, "Documento adjuntado.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["rendicion"] = self.rendicion
+        return context
+
+    def get_success_url(self):
+        return reverse(
+            "rendiciones:rendicion_detalle",
+            args=[self.rendicion.pk],
+        )
+
+
+class DocumentoRendicionDeleteView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "rendiciones.delete_documentorendicion"
+
+    def get(self, request, pk):
+        documento = get_object_or_404(
+            DocumentoRendicion.objects.select_related(
+                "rendicion",
+                "rendicion__trabajador",
+            ),
+            pk=pk,
+        )
+        return render(
+            request,
+            "rendiciones/documento_confirm_delete.html",
+            {
+                "documento": documento,
+                "rendicion": documento.rendicion,
+                "puede_eliminar": puede_editar_documentos(documento.rendicion),
+            },
+        )
+
+    def post(self, request, pk):
+        documento = get_object_or_404(
+            DocumentoRendicion.objects.select_related("rendicion"),
+            pk=pk,
+        )
+        rendicion_id = documento.rendicion_id
+        try:
+            eliminar_documento(documento, usuario=request.user)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("rendiciones:rendicion_detalle", pk=rendicion_id)
+        messages.success(request, "Documento eliminado.")
+        return redirect("rendiciones:rendicion_detalle", pk=rendicion_id)

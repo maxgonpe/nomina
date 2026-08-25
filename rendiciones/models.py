@@ -9,8 +9,20 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import Q, Sum
+from django.utils import timezone
+from django.utils.text import get_valid_filename
 
 from core.models import AuditModel
+
+
+def documento_rendicion_upload_to(instance, filename):
+    """media/rendiciones/<año>/<id_rendicion>/<nombre_seguro>."""
+    nombre = get_valid_filename(filename)
+    anio = timezone.now().year
+    if instance.rendicion_id and getattr(instance.rendicion, "fecha", None):
+        anio = instance.rendicion.fecha.year
+    rendicion_id = instance.rendicion_id or "nueva"
+    return f"rendiciones/{anio}/{rendicion_id}/{nombre}"
 
 
 class Rendicion(AuditModel):
@@ -153,7 +165,7 @@ class DocumentoRendicion(AuditModel):
     )
 
     archivo = models.FileField(
-        upload_to="rendiciones/%Y/%m/",
+        upload_to=documento_rendicion_upload_to,
     )
 
     descripcion = models.CharField(

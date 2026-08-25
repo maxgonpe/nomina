@@ -35,6 +35,18 @@ def puede_editar(rendicion):
     return rendicion.estado == Rendicion.Estado.BORRADOR
 
 
+def puede_editar_documentos(rendicion):
+    """Respaldos alterables solo en estados editables (REN004)."""
+    return puede_editar(rendicion)
+
+
+def assert_puede_editar_documentos(rendicion):
+    if not puede_editar_documentos(rendicion):
+        raise ValidationError(
+            "No se pueden agregar ni eliminar documentos en este estado."
+        )
+
+
 def assert_puede_editar_detalles(rendicion):
     if not puede_editar(rendicion):
         raise ValidationError(
@@ -158,3 +170,39 @@ def agregar_detalle(
         rendicion.actualizado_por = usuario
         rendicion.save(update_fields=["actualizado_por", "actualizado_en"])
     return detalle
+
+
+@transaction.atomic
+def agregar_documento(rendicion, *, tipo, archivo, descripcion="", usuario=None):
+    from rendiciones.models import DocumentoRendicion
+
+    assert_puede_editar_documentos(rendicion)
+    doc = DocumentoRendicion(
+        rendicion=rendicion,
+        tipo=tipo,
+        archivo=archivo,
+        descripcion=(descripcion or "").strip(),
+    )
+    if usuario is not None:
+        doc.creado_por = usuario
+        doc.actualizado_por = usuario
+    doc.full_clean()
+    doc.save()
+    if usuario is not None:
+        rendicion.actualizado_por = usuario
+        rendicion.save(update_fields=["actualizado_por", "actualizado_en"])
+    return doc
+
+
+@transaction.atomic
+def eliminar_documento(documento, usuario=None):
+    rendicion = documento.rendicion
+    assert_puede_editar_documentos(rendicion)
+    archivo = documento.archivo
+    documento.delete()
+    if archivo:
+        archivo.delete(save=False)
+    if usuario is not None:
+        rendicion.actualizado_por = usuario
+        rendicion.save(update_fields=["actualizado_por", "actualizado_en"])
+    return rendicion

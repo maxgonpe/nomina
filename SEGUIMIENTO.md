@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al cerrar **REN003** (validación y cuadratura).
+Punto de corte: **25 de agosto de 2026**, al cerrar **REN004** (documentos y respaldos).
 
-Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN003.
+Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN004.
 
 ## Dónde estamos
 
@@ -21,9 +21,9 @@ Orden ejecutado: `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 �
 |------|--------|
 | REN001 Registro de rendición | Hecho |
 | REN002 Distribución por centro de costo | Hecho |
-| REN003 Validación y cuadratura | **Hecho** |
-| REN004 Documentos y respaldos | **Siguiente** |
-| REN005 Flujo de aprobación | Pendiente |
+| REN003 Validación y cuadratura | Hecho |
+| REN004 Documentos y respaldos | **Hecho** |
+| REN005 Flujo de aprobación | **Siguiente** |
 | REN006 Consultas, filtros y reportes | Pendiente |
 | REN007 Preparación Finanzas e integración Excel | Pendiente |
 
@@ -62,6 +62,13 @@ Modelos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`
 - GET de confirmación muestra totales; no cambia estado
 - Ficha: errores de cuadratura + botón Presentar si cuadra
 - Tests: `rendiciones/test_cuadratura.py` — **11 OK** (suite rendiciones **33 OK**)
+
+### REN004 — Documentos y respaldos (hecho)
+
+- `DocumentoRendicionForm`: PDF/JPG/PNG, máx. 10 MB; `upload_to` → `media/rendiciones/<año>/<id>/`
+- UI: sección en ficha; `/rendiciones/<pk>/documentos/agregar/` · `/documentos/<pk>/eliminar/`
+- Alta/baja solo en BORRADOR (`puede_editar_documentos`); migración `0002_documento_upload_to`
+- Tests: `rendiciones/test_documentos.py` — **7 OK** (suite rendiciones **40 OK**)
 
 ## Qué quedó construido (Bloque 1 — no rehacer)
 
@@ -123,9 +130,9 @@ python manage.py runserver 127.0.0.1:8000
 ```
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
-- Primera tarea: **REN004 — Documentos y respaldos**
-  1. Leer `otros/mini-especificaciones/REN/REN004 — Documentos y respaldos.docx`
-  2. Reutilizar `DocumentoRendicion`; media segura PDF/JPG/PNG
+- Primera tarea: **REN005 — Flujo de aprobación**
+  1. Leer `otros/mini-especificaciones/REN/REN005 — Flujo de aprobación.docx`
+  2. Transiciones + permisos presentar/aprobar/rechazar/anular/reabrir
   3. Tests; actualizar esta tabla y el skill
 
 ## Roadmap de bloques (sistema completo)

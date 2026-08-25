@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Eliminar documento{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Eliminar documento</h1>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p>
+      Rendición #{{ rendicion.pk }} ·
+      {{ documento.get_tipo_display }}
+      {% if documento.descripcion %}— {{ documento.descripcion }}{% endif %}
+    </p>
+    {% if documento.archivo %}
+      <p class="text-muted small">Archivo: {{ documento.archivo.name }}</p>
+    {% endif %}
+    {% if puede_eliminar %}
+      <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Confirmar eliminación</button>
+        <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
+      </form>
+    {% else %}
+      <div class="alert alert-warning">
+        No se pueden eliminar documentos en el estado actual de la rendición.
+      </div>
+      <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Volver</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

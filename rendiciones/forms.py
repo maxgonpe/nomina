@@ -1,11 +1,15 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db.models import Q
 from django.forms import BaseInlineFormSet, inlineformset_factory
 
 from core.models import CentroCosto
-from rendiciones.models import Rendicion, RendicionDetalle
+from rendiciones.models import DocumentoRendicion, Rendicion, RendicionDetalle
 from rrhh.models import Trabajador
+
+EXTENSIONES_DOCUMENTO = ("pdf", "jpg", "jpeg", "png")
+TAMANO_MAX_DOCUMENTO = 10 * 1024 * 1024  # 10 MB
 
 
 class RendicionForm(forms.ModelForm):
@@ -167,3 +171,39 @@ def rendicion_detalle_formset_factory(extra=1):
 
 
 RendicionDetalleFormSet = rendicion_detalle_formset_factory(extra=1)
+
+
+class DocumentoRendicionForm(forms.ModelForm):
+    class Meta:
+        model = DocumentoRendicion
+        fields = ["tipo", "archivo", "descripcion"]
+        widgets = {
+            "tipo": forms.Select(attrs={"class": "form-select"}),
+            "archivo": forms.ClearableFileInput(
+                attrs={
+                    "class": "form-control",
+                    "accept": ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png",
+                }
+            ),
+            "descripcion": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["archivo"].validators.append(
+            FileExtensionValidator(
+                allowed_extensions=list(EXTENSIONES_DOCUMENTO),
+                message="Solo se permiten archivos PDF, JPG o PNG.",
+            )
+        )
+        self.fields["descripcion"].required = False
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data.get("archivo")
+        if not archivo:
+            raise ValidationError("Debe adjuntar un archivo.")
+        if archivo.size > TAMANO_MAX_DOCUMENTO:
+            raise ValidationError(
+                "El archivo no puede superar los 10 MB."
+            )
+        return archivo
