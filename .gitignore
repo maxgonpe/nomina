@@ -192,4 +192,4 @@ target/
 # Pipfile.lock
 # poetry.lock
 # pdm.lock
-# uv.lock
+# uv.lock.cursor/
