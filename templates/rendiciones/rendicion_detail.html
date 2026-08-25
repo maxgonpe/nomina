@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Rendición #{{ rendicion.pk }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Rendición #{{ rendicion.pk }}</h1>
+    <p class="text-muted mb-0">{{ rendicion.trabajador.nombre_completo }} · {{ rendicion.fecha|date:"d-m-Y" }}</p>
+  </div>
+  <div class="btn-group">
+    {% if puede_editar and perms.rendiciones.change_rendicion %}
+      <a class="btn btn-outline-primary" href="{% url 'rendiciones:rendicion_editar' rendicion.pk %}">Editar</a>
+    {% endif %}
+    {% if puede_anular and perms.rendiciones.change_rendicion %}
+      <a class="btn btn-outline-danger" href="{% url 'rendiciones:rendicion_anular' rendicion.pk %}">Anular</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Trabajador</dt>
+      <dd class="col-sm-9">
+        <a href="{% url 'rrhh:trabajador_detalle' rendicion.trabajador.pk %}">
+          {{ rendicion.trabajador.nombre_completo }}
+        </a>
+        <span class="text-muted">({{ rendicion.trabajador.rut_formateado }})</span>
+      </dd>
+      <dt class="col-sm-3">Fecha</dt>
+      <dd class="col-sm-9">{{ rendicion.fecha|date:"d-m-Y" }}</dd>
+      <dt class="col-sm-3">Descripción</dt>
+      <dd class="col-sm-9">{{ rendicion.descripcion }}</dd>
+      <dt class="col-sm-3">Total declarado</dt>
+      <dd class="col-sm-9">{{ rendicion.total_declarado }}</dd>
+      <dt class="col-sm-3">Estado</dt>
+      <dd class="col-sm-9">
+        {% if rendicion.estado == "BORRADOR" %}
+          <span class="badge text-bg-secondary">{{ rendicion.get_estado_display }}</span>
+        {% elif rendicion.estado == "ANULADA" %}
+          <span class="badge text-bg-dark">{{ rendicion.get_estado_display }}</span>
+        {% else %}
+          <span class="badge text-bg-primary">{{ rendicion.get_estado_display }}</span>
+        {% endif %}
+      </dd>
+      <dt class="col-sm-3">Observaciones</dt>
+      <dd class="col-sm-9">{{ rendicion.observaciones|default:"—"|linebreaksbr }}</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Cuadratura (REN002 / REN003)</div>
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Total distribuido</dt>
+      <dd class="col-sm-9">{{ rendicion.total_distribuido }}</dd>
+      <dt class="col-sm-3">Diferencia</dt>
+      <dd class="col-sm-9">{{ rendicion.diferencia }}</dd>
+      <dt class="col-sm-3">¿Cuadra?</dt>
+      <dd class="col-sm-9">
+        {% if rendicion.cuadra %}
+          <span class="badge text-bg-success">Sí</span>
+        {% else %}
+          <span class="badge text-bg-warning">No</span>
+          <span class="text-muted small">La distribución por centro de costo se carga en REN002.</span>
+        {% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Auditoría</div>
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Creado</dt>
+      <dd class="col-sm-9">
+        {{ rendicion.creado_en|date:"d-m-Y H:i" }}
+        {% if rendicion.creado_por %}· {{ rendicion.creado_por }}{% endif %}
+      </dd>
+      <dt class="col-sm-3">Actualizado</dt>
+      <dd class="col-sm-9">
+        {{ rendicion.actualizado_en|date:"d-m-Y H:i" }}
+        {% if rendicion.actualizado_por %}· {{ rendicion.actualizado_por }}{% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+
+<p><a href="{% url 'rendiciones:rendicion_lista' %}">← Volver al listado</a></p>
+{% endblock %}

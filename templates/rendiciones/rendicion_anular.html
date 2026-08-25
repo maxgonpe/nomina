@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Anular rendición #{{ rendicion.pk }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Anular rendición #{{ rendicion.pk }}</h1>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p>
+      Se anulará la rendición de
+      <strong>{{ rendicion.trabajador.nombre_completo }}</strong>
+      del {{ rendicion.fecha|date:"d-m-Y" }}
+      ({{ rendicion.descripcion }}).
+      El registro se conserva; no se elimina.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label" for="motivo">Motivo (opcional)</label>
+        <textarea class="form-control" name="motivo" id="motivo" rows="3"></textarea>
+      </div>
+      <button class="btn btn-danger" type="submit">Confirmar anulación</button>
+      <a class="btn btn-outline-secondary" href="{% url 'rendiciones:rendicion_detalle' rendicion.pk %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

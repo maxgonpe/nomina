@@ -10,7 +10,10 @@ Al trabajar en este repo, seguir el skill `nomina-sistema`, leer `CONTEXTO.md` (
 - Django es la fuente oficial; Excel solo importa/exporta.
 - No crear modelos por mes o año. Usar período + fecha.
 - Conceptos variables (bonos, colación, anticipos) no son columnas de liquidación.
+- Rendiciones: distribución por `RendicionDetalle` → `CentroCosto`; no columnas fijas CASA/EGC/CGA/OFI.
 - Parámetros de negocio con vigencia; no hardcodear factores.
-- Implementar Bloque 1 en orden: REM001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010.
-- Leer `otros/mini-especificaciones/` antes de codear un módulo.
+- Bloque 1 (cerrado): REM001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010.
+- Bloque 2 (activo): REN001 → 002 → 003 → 004 → 005 → 006 → 007.
+- Leer `otros/mini-especificaciones/` (REN en `…/REN/`) antes de codear un módulo.
 - Reutilizar los modelos ya existentes en las apps.
+- No implementar Finanzas/IVA/asientos dentro del Bloque 2.

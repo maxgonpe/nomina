@@ -3,18 +3,19 @@ name: nomina-sistema
 description: >-
   Orquesta la construcción del sistema Django de nómina, remuneraciones, rrhh,
   rendiciones, facturación, impuestos, finanzas y Excel para Sistemas Hídricos.
-  Use when implementing REM001-REM010, liquidaciones, trabajadores, centros de
-  costo, horas extra, finiquitos, o al continuar el sistema a partir de las
-  mini-especificaciones y planillas Excel.
+  Use when implementing REM001-REM010, REN001-REN007, liquidaciones, rendiciones,
+  trabajadores, centros de costo, horas extra, finiquitos, o al continuar el
+  sistema a partir de las mini-especificaciones y planillas Excel.
 ---
 
 # Sistema de nómina (Sistemas Hídricos)
 
 Django es la fuente oficial. Excel es plantilla de importación/exportación, nunca el maestro.
 
-Antes de implementar un módulo, leer la mini-especificación en `otros/mini-especificaciones/` y los modelos ya existentes en la app. No reinventar modelos que ya están.
+Antes de implementar un módulo, leer la mini-especificación y los modelos ya existentes en la app. No reinventar modelos que ya están.
 
-Detalle de fórmulas, mapeo Excel y criterios REM: [referencia-dominio.md](referencia-dominio.md).
+- Bloque 1 (fórmulas REM): [referencia-dominio.md](referencia-dominio.md)
+- Bloque 2 (plan REN): [referencia-bloque2-rendiciones.md](referencia-bloque2-rendiciones.md)
 
 ## Apps (no fusionar, no renombrar)
 
@@ -34,6 +35,7 @@ Detalle de fórmulas, mapeo Excel y criterios REM: [referencia-dominio.md](refer
 
 - No crear modelos por mes/año (`NominaAgosto`, `Gastos2026`). Usar período + fecha.
 - No poner aguinaldo/bono/colación como columnas fijas en `LiquidacionMensual`. Son `ConceptoRemuneracion` + `MovimientoRemuneracion`.
+- No poner CASA/EGC/CGA/OFI como columnas en rendiciones. Son filas `RendicionDetalle` → `CentroCosto`.
 - Factores (`FACTOR_HE`, IVA, PPM, colación, movilización, desgaste) viven en `ParametroNegocio` / `ParametroValor`. Nunca hardcodear `0.0079545` ni `0.19` en servicios.
 - Liquidaciones cerradas guardan snapshots (sueldo, cargo, centro de costo). Un anexo posterior no reescribe enero.
 - Relacionar por FK (`trabajador_id`, RUT normalizado). Nunca por nombre.
@@ -43,31 +45,34 @@ Detalle de fórmulas, mapeo Excel y criterios REM: [referencia-dominio.md](refer
 - Soft-delete: `activo=False`; no borrar históricos.
 - UI y mensajes en español (Chile). Fechas `dd-mm-yyyy`. Zona `America/Santiago`.
 - No commitear `otros/` ni `.xlsx` (están en `.gitignore`).
+- Bloque 2 no implementa Finanzas, IVA, asientos ni facturas (REN007 solo prepara interfaces).
 
 ## Orden de construcción
 
-Infra primero (settings, validators, apps registradas, migraciones, admin). Luego Bloque 1 en este orden:
+Infra primero. Luego bloques:
 
-1. REM001 Trabajadores
-2. REM002 Cargos / contratos / anexos
-3. REM003 Períodos
-4. REM004 Conceptos y parámetros
-5. REM006 Horas extra
-6. REM007 Movimientos
-7. REM008 Finiquitos
-8. REM005 Motor de liquidación
-9. REM009 Costos
-10. REM010 Resumen anual
+### Bloque 1 — Remuneraciones (cerrado)
 
-No adelantar REM005 con datos simulados si faltan 001–004 y 006–008.
+`REM001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 → 009 → 010`
 
-## Cómo implementar cada REM
+### Bloque 2 — Rendiciones (activo)
 
-1. Leer `otros/mini-especificaciones/REM00X*.md` (o `.docx`/`.pdf` equivalentes).
+`REN001 → 002 → 003 → 004 → 005 → 006 → 007`
+
+Specs: `otros/mini-especificaciones/REN/` (docx). PDF en `otros/pdf/` como respaldo (algunos casi vacíos).
+
+### Después
+
+Facturación → Impuestos → Finanzas → Contabilidad → Integración Excel.
+
+## Cómo implementar cada ítem (REM / REN)
+
+1. Leer la mini-spec correspondiente (`otros/mini-especificaciones/…`).
 2. Reutilizar modelos existentes; cambiarlos solo si la spec lo exige.
 3. Capa: `services/` para reglas, `forms.py` + CBV para UI, `admin.py` operativo.
 4. Tests del criterio de aceptación de la spec.
-5. No dejar TODOs vacíos del alcance de esa REM.
+5. No dejar TODOs vacíos del alcance de ese ítem.
+6. Actualizar `SEGUIMIENTO.md` al cerrar.
 
 ## Stack
 
@@ -75,6 +80,6 @@ Django 5.2, SQLite ahora (diseñar para PostgreSQL después), Bootstrap + Chart.
 
 ## Estado
 
-La bitácora viva está en [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md). El handoff para un chat nuevo está en [`CONTEXTO.md`](../../../CONTEXTO.md).
+Bitácora: [`SEGUIMIENTO.md`](../../../SEGUIMIENTO.md). Handoff: [`CONTEXTO.md`](../../../CONTEXTO.md).
 
-Corte actual: REM009 cerrado. Siguiente: REM010 (resumen anual y gráfico).
+Corte: **Bloque 1 + REN001 cerrados**. **Siguiente: REN002** (distribución por centro de costo).

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Resumen {{ anio }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Resumen anual {{ anio|stringformat:"d" }}</h1>
+    <p class="text-muted mb-0">
+      Nómina anual generada desde las liquidaciones (sin leer Excel).
+      Métrica: <strong>{{ resumen.metrica_label }}</strong>
+    </p>
+  </div>
+</div>
+
+<p class="small text-muted">{{ resumen.metrica_descripcion }}</p>
+
+<form class="row g-2 mb-4" method="get" id="form-resumen-anual" action="{% url 'remuneraciones:resumen_anual' anio %}">
+  <div class="col-md-2">
+    <label class="form-label" for="anio-sel">Año</label>
+    <select class="form-select" id="anio-sel" name="anio_nav" data-resumen-anio>
+      {% for a in anios %}
+        <option value="{{ a|stringformat:'d' }}" {% if a == anio %}selected{% endif %}>{{ a|stringformat:"d" }}</option>
+      {% empty %}
+        <option value="{{ anio|stringformat:'d' }}" selected>{{ anio|stringformat:"d" }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label" for="metrica">Métrica</label>
+    <select class="form-select" name="metrica" id="metrica">
+      {% for key, info in metricas.items %}
+        <option value="{{ key }}" {% if q_metrica == key %}selected{% endif %}>{{ info.label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label" for="trabajador">Trabajador</label>
+    <select class="form-select" name="trabajador" id="trabajador">
+      <option value="">Todos</option>
+      {% for t in trabajadores %}
+        <option value="{{ t.pk }}" {% if q_trabajador == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.nombre_completo }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label" for="centro_costo">Centro de costo</label>
+    <select class="form-select" name="centro_costo" id="centro_costo">
+      <option value="">Todos</option>
+      {% for c in centros %}
+        <option value="{{ c.pk }}" {% if q_centro == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.codigo }} — {{ c.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-1 d-flex align-items-end">
+    <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+  </div>
+</form>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Totales mensuales ({{ resumen.metrica_label }})</div>
+  <div class="card-body">
+    <canvas id="grafico-resumen-anual" height="100" aria-label="Totales mensuales {{ anio }}"></canvas>
+  </div>
+</div>
+
+{{ resumen.grafico|json_script:"resumen-grafico-data" }}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h5 mb-0">Nómina anual</h2>
+  <span class="badge text-bg-dark">Total anual: {{ resumen.total_anual }}</span>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Trabajador</th>
+          <th>RUT</th>
+          <th>Cargo</th>
+          {% for mes in resumen.meses %}
+            <th class="text-end">{{ mes.nombre_corto }}</th>
+          {% endfor %}
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fila in resumen.filas %}
+          <tr>
+            <td>{{ fila.nombre }}</td>
+            <td>{{ fila.rut }}</td>
+            <td>{{ fila.cargo|default:"—" }}</td>
+            {% for valor in fila.valores_mes %}
+              <td class="text-end">{% if valor %}{{ valor }}{% else %}—{% endif %}</td>
+            {% endfor %}
+            <td class="text-end fw-semibold">{{ fila.total }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="16" class="text-muted">
+              No hay liquidaciones calculadas para {{ anio }} con estos filtros.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      {% if resumen.filas %}
+      <tfoot class="table-light">
+        <tr>
+          <th colspan="3">Total mensual</th>
+          {% for total in resumen.totales_mes %}
+            <th class="text-end">{{ total }}</th>
+          {% endfor %}
+          <th class="text-end">{{ resumen.total_anual }}</th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="{% static 'remuneraciones/js/resumen_anual.js' %}"></script>
+{% endblock %}

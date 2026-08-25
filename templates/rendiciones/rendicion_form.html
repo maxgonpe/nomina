@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar rendición{% else %}Nueva rendición{% endif %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{% if form.instance.pk %}Editar rendición #{{ form.instance.pk }}{% else %}Nueva rendición{% endif %}</h1>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.trabajador.id_for_label }}">Trabajador</label>
+        {{ form.trabajador }}
+        {% if form.trabajador.errors %}<div class="text-danger small">{{ form.trabajador.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.fecha.id_for_label }}">Fecha</label>
+        {{ form.fecha }}
+        {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+        {{ form.descripcion }}
+        {% if form.descripcion.errors %}<div class="text-danger small">{{ form.descripcion.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.total_declarado.id_for_label }}">Total declarado</label>
+        {{ form.total_declarado }}
+        {% if form.total_declarado.errors %}<div class="text-danger small">{{ form.total_declarado.errors }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+        {{ form.observaciones }}
+        {% if form.observaciones.errors %}<div class="text-danger small">{{ form.observaciones.errors }}</div>{% endif %}
+      </div>
+      <p class="text-muted small">El estado inicial es Borrador; las transiciones se gestionan en el flujo de aprobación.</p>
+      <button class="btn btn-primary" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% if form.instance.pk %}{% url 'rendiciones:rendicion_detalle' form.instance.pk %}{% else %}{% url 'rendiciones:rendicion_lista' %}{% endif %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

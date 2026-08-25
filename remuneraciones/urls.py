@@ -275,4 +275,14 @@ urlpatterns = [
         views.CostoListView.as_view(),
         name="trabajador_costos",
     ),
+    path(
+        "resumen/",
+        views.ResumenAnualView.as_view(),
+        name="resumen_anual_actual",
+    ),
+    path(
+        "resumen/<int:anio>/",
+        views.ResumenAnualView.as_view(),
+        name="resumen_anual",
+    ),
 ]

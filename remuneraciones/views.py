@@ -17,6 +17,7 @@ from django.views.generic import (
     UpdateView,
 )
 
+from core.models import CentroCosto
 from core.mixins import AuditFormMixin
 from remuneraciones.forms import (
     ConceptoRemuneracionForm,
@@ -77,6 +78,12 @@ from remuneraciones.services.periodos import (
     marcar_calculado,
     reabrir,
     validar,
+)
+from remuneraciones.services.resumenes import (
+    METRICA_A_PAGAR,
+    METRICA_PAGADO,
+    METRICAS,
+    resumen_anual,
 )
 from rrhh.models import Trabajador
 
@@ -1606,3 +1613,62 @@ class PeriodoGenerarCostosView(
         except ValidationError as exc:
             messages.error(request, _mensaje_error(exc))
         return redirect("remuneraciones:periodo_detalle", pk=periodo.pk)
+
+
+class ResumenAnualView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    """REM010 — nómina anual + gráfico (reporte, sin modelo por año)."""
+
+    permission_required = "remuneraciones.view_liquidacionmensual"
+    template_name = "remuneraciones/resumen/anual.html"
+
+    def get(self, request, anio=None):
+        if anio is None:
+            anio = timezone.localdate().year
+            return redirect("remuneraciones:resumen_anual", anio=anio)
+
+        metrica = request.GET.get("metrica", METRICA_A_PAGAR).strip()
+        if metrica not in METRICAS:
+            metrica = METRICA_A_PAGAR
+
+        trabajador_id = request.GET.get("trabajador", "").strip() or None
+        centro_id = request.GET.get("centro_costo", "").strip() or None
+        if trabajador_id and not str(trabajador_id).isdigit():
+            trabajador_id = None
+        if centro_id and not str(centro_id).isdigit():
+            centro_id = None
+
+        resumen = resumen_anual(
+            anio,
+            metrica=metrica,
+            trabajador_id=int(trabajador_id) if trabajador_id else None,
+            centro_costo_id=int(centro_id) if centro_id else None,
+        )
+        anios = list(resumen["anios_disponibles"])
+        if anio not in anios:
+            anios = sorted(set(anios + [anio]), reverse=True)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "resumen": resumen,
+                "anio": anio,
+                "anios": anios,
+                "metricas": METRICAS,
+                "q_metrica": metrica,
+                "q_trabajador": str(trabajador_id or ""),
+                "q_centro": str(centro_id or ""),
+                "trabajadores": Trabajador.objects.filter(
+                    activo=True
+                ).order_by("nombre_completo"),
+                "centros": CentroCosto.objects.filter(activo=True).order_by(
+                    "codigo"
+                ),
+                "metrica_a_pagar": METRICA_A_PAGAR,
+                "metrica_pagado": METRICA_PAGADO,
+            },
+        )

@@ -1,3 +1,159 @@
-from django.shortcuts import render
+from django.contrib import messages
+from django.contrib.auth.mixins import (
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+)
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views import View
+from django.views.generic import (
+    CreateView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
 
-# Create your views here.
+from core.mixins import AuditFormMixin
+from rendiciones.forms import RendicionForm
+from rendiciones.models import Rendicion
+from rendiciones.services.rendiciones import anular, puede_editar
+from rrhh.models import Trabajador
+
+
+class RendicionListView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    ListView,
+):
+    permission_required = "rendiciones.view_rendicion"
+    model = Rendicion
+    paginate_by = 25
+    template_name = "rendiciones/rendicion_list.html"
+    context_object_name = "rendiciones"
+
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related("trabajador")
+        )
+        trabajador_id = self.request.GET.get("trabajador", "").strip()
+        if trabajador_id.isdigit():
+            qs = qs.filter(trabajador_id=int(trabajador_id))
+        estado = self.request.GET.get("estado", "").strip()
+        if estado:
+            qs = qs.filter(estado=estado)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["trabajador_id"] = self.request.GET.get("trabajador", "").strip()
+        context["estado"] = self.request.GET.get("estado", "").strip()
+        context["estados"] = Rendicion.Estado.choices
+        context["trabajadores"] = Trabajador.objects.order_by("nombre_completo")
+        return context
+
+
+class RendicionCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    CreateView,
+):
+    permission_required = "rendiciones.add_rendicion"
+    model = Rendicion
+    form_class = RendicionForm
+    template_name = "rendiciones/rendicion_form.html"
+
+    def form_valid(self, form):
+        form.instance.estado = Rendicion.Estado.BORRADOR
+        messages.success(self.request, "Rendición creada correctamente.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("rendiciones:rendicion_detalle", args=[self.object.pk])
+
+
+class RendicionDetailView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DetailView,
+):
+    permission_required = "rendiciones.view_rendicion"
+    model = Rendicion
+    template_name = "rendiciones/rendicion_detail.html"
+    context_object_name = "rendicion"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            "trabajador",
+            "creado_por",
+            "actualizado_por",
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["puede_editar"] = puede_editar(self.object)
+        context["puede_anular"] = self.object.estado == Rendicion.Estado.BORRADOR
+        return context
+
+
+class RendicionUpdateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    AuditFormMixin,
+    UpdateView,
+):
+    permission_required = "rendiciones.change_rendicion"
+    model = Rendicion
+    form_class = RendicionForm
+    template_name = "rendiciones/rendicion_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        rendicion = get_object_or_404(Rendicion, pk=kwargs["pk"])
+        if not puede_editar(rendicion):
+            messages.error(
+                request,
+                "Solo se pueden editar rendiciones en borrador.",
+            )
+            return redirect("rendiciones:rendicion_detalle", pk=rendicion.pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        # El estado no se edita en REN001; se conserva el vigente.
+        messages.success(self.request, "Rendición actualizada.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("rendiciones:rendicion_detalle", args=[self.object.pk])
+
+
+class RendicionAnularView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    permission_required = "rendiciones.change_rendicion"
+
+    def get(self, request, pk):
+        rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=pk,
+        )
+        return render(
+            request,
+            "rendiciones/rendicion_anular.html",
+            {"rendicion": rendicion},
+        )
+
+    def post(self, request, pk):
+        rendicion = get_object_or_404(Rendicion, pk=pk)
+        motivo = request.POST.get("motivo", "").strip()
+        try:
+            anular(rendicion, usuario=request.user, motivo=motivo)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("rendiciones:rendicion_detalle", pk=pk)
+        messages.success(request, f"Rendición #{pk} anulada.")
+        return redirect("rendiciones:rendicion_detalle", pk=pk)
