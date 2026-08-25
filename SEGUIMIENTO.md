@@ -1,8 +1,8 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al cerrar **REN002** (distribución por centro de costo).
+Punto de corte: **25 de agosto de 2026**, al cerrar **REN003** (validación y cuadratura).
 
-Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN002.
+Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec REN en `otros/mini-especificaciones/REN/` (o PDF en `otros/pdf/`). **No rehacer** REM001–REM010 ni REN001–REN003.
 
 ## Dónde estamos
 
@@ -20,9 +20,9 @@ Orden ejecutado: `001 → 002 → 003 → 004 → 006 → 007 → 008 → 005 �
 | Ítem | Estado |
 |------|--------|
 | REN001 Registro de rendición | Hecho |
-| REN002 Distribución por centro de costo | **Hecho** |
-| REN003 Validación y cuadratura | **Siguiente** |
-| REN004 Documentos y respaldos | Pendiente |
+| REN002 Distribución por centro de costo | Hecho |
+| REN003 Validación y cuadratura | **Hecho** |
+| REN004 Documentos y respaldos | **Siguiente** |
 | REN005 Flujo de aprobación | Pendiente |
 | REN006 Consultas, filtros y reportes | Pendiente |
 | REN007 Preparación Finanzas e integración Excel | Pendiente |
@@ -54,6 +54,14 @@ Modelos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`
 - Solo editable en BORRADOR; CC activo en altas; histórico conserva CC inactivo
 - JS preliminar: `static/rendiciones/js/distribucion.js` (suma/diferencia; servidor manda)
 - Tests: `rendiciones/test_distribucion.py` — **10 OK** (suite rendiciones **22 OK**)
+
+### REN003 — Validación y cuadratura (hecho)
+
+- `validar_cuadratura()`: exige detalles, `total_declarado > 0`, `diferencia == Decimal("0.00")`
+- `presentar()`: solo BORRADOR → PRESENTADA si cuadra; POST en `/rendiciones/<pk>/presentar/`
+- GET de confirmación muestra totales; no cambia estado
+- Ficha: errores de cuadratura + botón Presentar si cuadra
+- Tests: `rendiciones/test_cuadratura.py` — **11 OK** (suite rendiciones **33 OK**)
 
 ## Qué quedó construido (Bloque 1 — no rehacer)
 
@@ -115,10 +123,10 @@ python manage.py runserver 127.0.0.1:8000
 ```
 
 - Login: [http://127.0.0.1:8000/cuentas/login/](http://127.0.0.1:8000/cuentas/login/)
-- Primera tarea: **REN003 — Validación y cuadratura**
-  1. Leer `otros/mini-especificaciones/REN/REN003 — Validación y cuadratura.docx`
-  2. `validar_cuadratura()` Decimal exacto; gate a PRESENTADA
-  3. Tests de aceptación; actualizar esta tabla y el skill
+- Primera tarea: **REN004 — Documentos y respaldos**
+  1. Leer `otros/mini-especificaciones/REN/REN004 — Documentos y respaldos.docx`
+  2. Reutilizar `DocumentoRendicion`; media segura PDF/JPG/PNG
+  3. Tests; actualizar esta tabla y el skill
 
 ## Roadmap de bloques (sistema completo)
 

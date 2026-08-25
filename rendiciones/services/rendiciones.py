@@ -51,6 +51,53 @@ def diferencia(rendicion):
     return rendicion.diferencia
 
 
+def validar_cuadratura(rendicion):
+    """
+    Gate formal BORRADOR → PRESENTADA (REN003).
+    Exige detalles, total_declarado > 0 y Decimal exacto.
+    """
+    errores = []
+    if not rendicion.detalles.exists():
+        errores.append("La rendición no tiene líneas de distribución.")
+    if rendicion.total_declarado is None or rendicion.total_declarado <= Decimal("0.00"):
+        errores.append(
+            "El total declarado debe ser mayor que cero para presentar."
+        )
+    diff = diferencia(rendicion)
+    if diff != Decimal("0.00"):
+        errores.append(
+            f"La rendición no cuadra: diferencia {diff}."
+        )
+    if errores:
+        raise ValidationError(errores)
+    return True
+
+
+def puede_presentar(rendicion):
+    if rendicion.estado != Rendicion.Estado.BORRADOR:
+        return False
+    try:
+        validar_cuadratura(rendicion)
+    except ValidationError:
+        return False
+    return True
+
+
+@transaction.atomic
+def presentar(rendicion, usuario=None):
+    """Pasa BORRADOR → PRESENTADA solo si cuadra (REN003)."""
+    if rendicion.estado != Rendicion.Estado.BORRADOR:
+        raise ValidationError(
+            "Solo una rendición en borrador puede presentarse."
+        )
+    validar_cuadratura(rendicion)
+    rendicion.estado = Rendicion.Estado.PRESENTADA
+    if usuario is not None:
+        rendicion.actualizado_por = usuario
+    rendicion.save(update_fields=["estado", "actualizado_por", "actualizado_en"])
+    return rendicion
+
+
 @transaction.atomic
 def guardar_distribucion(rendicion, formset, usuario=None):
     """Persiste el formset de detalles y actualiza auditoría de la cabecera."""

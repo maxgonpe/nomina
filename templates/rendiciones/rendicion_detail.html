@@ -11,6 +11,9 @@
       <a class="btn btn-outline-primary" href="{% url 'rendiciones:rendicion_editar' rendicion.pk %}">Editar</a>
       <a class="btn btn-outline-primary" href="{% url 'rendiciones:rendicion_distribucion' rendicion.pk %}">Distribuir</a>
     {% endif %}
+    {% if rendicion.estado == "BORRADOR" and perms.rendiciones.change_rendicion %}
+      <a class="btn btn-outline-success" href="{% url 'rendiciones:rendicion_presentar' rendicion.pk %}">Presentar</a>
+    {% endif %}
     {% if puede_anular and perms.rendiciones.change_rendicion %}
       <a class="btn btn-outline-danger" href="{% url 'rendiciones:rendicion_anular' rendicion.pk %}">Anular</a>
     {% endif %}
@@ -91,7 +94,7 @@
         <tr>
           <th colspan="2" class="text-end">¿Cuadra?</th>
           <th class="text-end">
-            {% if rendicion.cuadra %}
+            {% if cuadratura_ok %}
               <span class="badge text-bg-success">Sí</span>
             {% else %}
               <span class="badge text-bg-warning">No</span>
@@ -101,6 +104,20 @@
       </tfoot>
     </table>
   </div>
+  {% if not cuadratura_ok and cuadratura_errores %}
+    <div class="card-footer">
+      <ul class="mb-0 small text-danger">
+        {% for err in cuadratura_errores %}
+          <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% elif puede_presentar and perms.rendiciones.change_rendicion %}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <span class="text-success small">La rendición cuadra y puede presentarse.</span>
+      <a class="btn btn-sm btn-success" href="{% url 'rendiciones:rendicion_presentar' rendicion.pk %}">Presentar</a>
+    </div>
+  {% endif %}
 </div>
 
 <div class="card shadow-sm mb-4">

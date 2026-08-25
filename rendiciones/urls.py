@@ -35,4 +35,9 @@ urlpatterns = [
         views.RendicionAnularView.as_view(),
         name="rendicion_anular",
     ),
+    path(
+        "<int:pk>/presentar/",
+        views.RendicionPresentarView.as_view(),
+        name="rendicion_presentar",
+    ),
 ]

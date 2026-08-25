@@ -21,6 +21,9 @@ from rendiciones.services.rendiciones import (
     anular,
     guardar_distribucion,
     puede_editar,
+    puede_presentar,
+    presentar,
+    validar_cuadratura,
 )
 from rrhh.models import Trabajador
 
@@ -105,7 +108,15 @@ class RendicionDetailView(
         context = super().get_context_data(**kwargs)
         context["puede_editar"] = puede_editar(self.object)
         context["puede_anular"] = self.object.estado == Rendicion.Estado.BORRADOR
+        context["puede_presentar"] = puede_presentar(self.object)
         context["detalles"] = self.object.detalles.select_related("centro_costo")
+        try:
+            validar_cuadratura(self.object)
+            context["cuadratura_ok"] = True
+            context["cuadratura_errores"] = []
+        except ValidationError as exc:
+            context["cuadratura_ok"] = False
+            context["cuadratura_errores"] = list(exc.messages)
         return context
 
 
@@ -228,4 +239,53 @@ class RendicionAnularView(
             messages.error(request, "; ".join(exc.messages))
             return redirect("rendiciones:rendicion_detalle", pk=pk)
         messages.success(request, f"Rendición #{pk} anulada.")
+        return redirect("rendiciones:rendicion_detalle", pk=pk)
+
+
+class RendicionPresentarView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    View,
+):
+    """Confirmación (GET) + cambio de estado solo por POST (REN003)."""
+
+    permission_required = "rendiciones.change_rendicion"
+
+    def get(self, request, pk):
+        rendicion = get_object_or_404(
+            Rendicion.objects.select_related("trabajador"),
+            pk=pk,
+        )
+        errores = []
+        try:
+            if rendicion.estado != Rendicion.Estado.BORRADOR:
+                raise ValidationError(
+                    "Solo una rendición en borrador puede presentarse."
+                )
+            validar_cuadratura(rendicion)
+            cuadra = True
+        except ValidationError as exc:
+            cuadra = False
+            errores = list(exc.messages)
+        return render(
+            request,
+            "rendiciones/rendicion_presentar.html",
+            {
+                "rendicion": rendicion,
+                "cuadra": cuadra,
+                "errores": errores,
+            },
+        )
+
+    def post(self, request, pk):
+        rendicion = get_object_or_404(Rendicion, pk=pk)
+        try:
+            presentar(rendicion, usuario=request.user)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("rendiciones:rendicion_presentar", pk=pk)
+        messages.success(
+            request,
+            f"Rendición #{pk} presentada. Queda pendiente de aprobación.",
+        )
         return redirect("rendiciones:rendicion_detalle", pk=pk)
