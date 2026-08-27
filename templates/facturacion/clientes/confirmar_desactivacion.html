@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Desactivar cliente{% endblock %}
+{% block content %}<h1 class="h3 mb-3">Desactivar cliente</h1><div class="card shadow-sm"><div class="card-body"><p>¿Desactivar a <strong>{{ cliente.razon_social }}</strong> ({{ cliente.rut }})?</p><p class="text-muted">El cliente no se eliminará y su histórico se conservará.</p><form method="post">{% csrf_token %}<button class="btn btn-danger" type="submit">Desactivar</button> <a class="btn btn-outline-secondary" href="{% url 'facturacion:cliente_detalle' cliente.pk %}">Cancelar</a></form></div></div>{% endblock %}

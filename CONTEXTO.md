@@ -148,10 +148,10 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 ---
 
-## Estado al corte (25 ago 2026)
+## Estado al corte (27 ago 2026)
 
-**Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)**.  
-**Siguiente:** **Bloque 3 — Facturación + compras** (mini-specs cuando existan).
+**Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)** + **FAC001–FAC003**.
+**Siguiente:** **FAC004 — Motor de cálculo tributario**.
 
 | ID | Qué | Estado |
 |----|-----|--------|
@@ -162,6 +162,10 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 | REN005 | Flujo de estados | Pendiente |
 | REN006 | Reportes / filtros | Pendiente |
 | REN007 | Frontera Finanzas + Excel | Pendiente |
+| FAC001 | Maestro de clientes | Hecho |
+| FAC002 | Obras y centros de costo | Hecho |
+| FAC003 | Documentos tributarios de venta | Hecho |
+| FAC004–007 | Facturación y compras restantes | Pendiente |
 
 Modelos listos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`. Finanzas ya tiene FK a `Rendicion` (consumo futuro; no implementar en este bloque).
 

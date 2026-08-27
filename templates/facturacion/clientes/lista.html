@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Clientes</h1>
+  {% if perms.facturacion.add_cliente %}<a class="btn btn-primary" href="{% url 'facturacion:cliente_crear' %}">Nuevo cliente</a>{% endif %}
+</div>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-6"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por razón social o RUT"></div>
+  <div class="col-md-4 d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" name="incluir_inactivos" value="1" id="inactivos" {% if incluir_inactivos %}checked{% endif %}><label class="form-check-label" for="inactivos">Incluir inactivos</label></div></div>
+  <div class="col-md-2"><button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button></div>
+</form>
+<div class="card shadow-sm"><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Razón social</th><th>RUT</th><th>Estado</th></tr></thead><tbody>
+{% for cliente in clientes %}<tr><td><a href="{% url 'facturacion:cliente_detalle' cliente.pk %}">{{ cliente.razon_social }}</a></td><td>{{ cliente.rut }}</td><td>{% if cliente.activo %}<span class="badge text-bg-success">Activo</span>{% else %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="3" class="text-muted">No hay clientes para mostrar.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

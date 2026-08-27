@@ -1,6 +1,6 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **25 de agosto de 2026**, al cerrar **Bloque 2 — Rendiciones (REN001–REN007)**.
+Punto de corte: **27 de agosto de 2026**, al cerrar **FAC001 — Maestro de clientes**.
 
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
@@ -26,6 +26,41 @@ Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina
 | REN007 Preparación Finanzas e integración Excel | **Hecho — Bloque 2 cerrado** |
 
 Orden Bloque 2: `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
+
+### Bloque 3 — Facturación
+
+| Ítem | Estado |
+|------|--------|
+| FAC001 Maestro de clientes | Hecho |
+| FAC002 Obras y centros de costo | Hecho |
+| FAC003 Documentos tributarios de venta | Hecho |
+| FAC004 Motor de cálculo tributario | Pendiente |
+| FAC005 Cobros y estado de pago | Pendiente |
+| FAC006 Consultas y reportes | Pendiente |
+| FAC007 Integración con Impuestos, Finanzas y Excel | Pendiente |
+
+#### FAC001 — Maestro de clientes (hecho)
+
+- CRUD en `/facturacion/clientes/` con listar, crear, consultar, editar y desactivar.
+- RUT chileno validado y normalizado; razón social con espacios normalizados.
+- Soft-delete mediante `activo=False`; no se elimina el registro histórico.
+- Permisos Django `view_cliente`, `add_cliente`, `change_cliente` y `delete_cliente`.
+- Tests: `facturacion/tests.py` — 4 casos.
+
+#### FAC002 — Obras y centros de costo (hecho)
+
+- CRUD de obras en `/facturacion/obras/` y listado filtrado por cliente.
+- Cliente activo obligatorio en altas; centro de costo opcional.
+- Código único, nombres normalizados y fechas validadas.
+- Se conservan obras terminadas para el histórico de documentos.
+
+#### FAC003 — Registro de documentos tributarios de venta (hecho)
+
+- CRUD en `/facturacion/documentos/`, con listados filtrables por cliente y obra.
+- IVA y total calculados en servidor usando el parámetro vigente `IVA`; documentos exentos quedan con IVA cero.
+- Valida pertenencia cliente/obra, número único, fechas y neto no negativo.
+- Anulación mediante acción específica, conservando el documento histórico.
+- Tests: `facturacion/tests.py` — 10 casos en total.
 
 Orden del Bloque 2:
 

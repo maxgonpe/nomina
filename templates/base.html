@@ -328,7 +328,6 @@
                  ACTIVAR CUANDO LAS URLs EXISTAN
                  ============================================= -->
 
-            {#
             <li class="nav-item dropdown">
 
               <a
@@ -352,7 +351,7 @@
                 <li>
                   <a
                     class="dropdown-item"
-                    href="" # url 'facturacion:cliente_lista' 
+                  href="{% url 'facturacion:cliente_lista' %}"
                   >
                     Clientes
                   </a>
@@ -361,7 +360,7 @@
                 <li>
                   <a
                     class="dropdown-item"
-                    href="" # url 'facturacion:obra_lista' 
+                  href="{% url 'facturacion:obra_lista' %}"
                   >
                     Obras
                   </a>
@@ -380,7 +379,7 @@
                 <li>
                   <a
                     class="dropdown-item"
-                    href="" # url 'facturacion:documento_lista' 
+                  href="{% url 'facturacion:documento_lista' %}"
                   >
                     Documentos tributarios
                   </a>
@@ -389,7 +388,6 @@
               </ul>
 
             </li>
-            #}
 
 
             <!-- =============================================

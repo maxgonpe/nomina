@@ -1,0 +1,167 @@
+from decimal import Decimal
+
+from django import forms
+from django.core.exceptions import ValidationError
+
+from core.validators import normalizar_rut, validar_rut
+from core.models import CentroCosto
+from core.services.parametros import valor
+from facturacion.models import Cliente, DocumentoTributario, Obra
+
+
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = ["rut", "razon_social", "activo", "observaciones"]
+        widgets = {
+            "rut": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "76.123.456-7",
+                "autocomplete": "off",
+            }),
+            "razon_social": forms.TextInput(attrs={"class": "form-control"}),
+            "activo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+    def clean_rut(self):
+        rut = self.cleaned_data["rut"]
+        validar_rut(rut)
+        normalizado = normalizar_rut(rut)
+        clientes = Cliente.objects.filter(rut_normalizado=normalizado)
+        if self.instance.pk:
+            clientes = clientes.exclude(pk=self.instance.pk)
+        if clientes.exists():
+            raise ValidationError("Ya existe un cliente con este RUT.")
+        return rut.strip()
+
+    def clean_razon_social(self):
+        razon_social = " ".join((self.cleaned_data.get("razon_social") or "").split())
+        if not razon_social:
+            raise ValidationError("La razón social es obligatoria.")
+        return razon_social
+
+    def clean_activo(self):
+        activo = self.cleaned_data.get("activo")
+        if not self.instance.pk and "activo" not in self.data:
+            return True
+        return activo
+
+
+class ObraForm(forms.ModelForm):
+    class Meta:
+        model = Obra
+        fields = ["codigo", "nombre", "cliente", "centro_costo", "fecha_inicio", "fecha_termino", "estado", "observaciones"]
+        widgets = {
+            "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "nombre": forms.TextInput(attrs={"class": "form-control"}),
+            "cliente": forms.Select(attrs={"class": "form-select"}),
+            "centro_costo": forms.Select(attrs={"class": "form-select"}),
+            "fecha_inicio": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"),
+            "fecha_termino": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"),
+            "estado": forms.Select(attrs={"class": "form-select"}),
+            "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        cliente = kwargs.pop("cliente", None)
+        super().__init__(*args, **kwargs)
+        self.fields["cliente"].queryset = Cliente.objects.filter(activo=True).order_by("razon_social")
+        if self.instance.pk and not self.instance.cliente.activo:
+            self.fields["cliente"].queryset = Cliente.objects.filter(pk=self.instance.cliente_id) | self.fields["cliente"].queryset
+        self.fields["centro_costo"].queryset = CentroCosto.objects.filter(activo=True).order_by("codigo")
+        self.fields["centro_costo"].required = False
+        self.fields["fecha_inicio"].input_formats = ["%Y-%m-%d"]
+        self.fields["fecha_termino"].input_formats = ["%Y-%m-%d"]
+        if cliente:
+            self.initial["cliente"] = cliente.pk
+
+    def clean_codigo(self):
+        codigo = (self.cleaned_data.get("codigo") or "").strip().upper()
+        if not codigo:
+            raise ValidationError("El código es obligatorio.")
+        obras = Obra.objects.filter(codigo=codigo)
+        if self.instance.pk:
+            obras = obras.exclude(pk=self.instance.pk)
+        if obras.exists():
+            raise ValidationError("Ya existe una obra con este código.")
+        return codigo
+
+    def clean_nombre(self):
+        nombre = " ".join((self.cleaned_data.get("nombre") or "").split())
+        if not nombre:
+            raise ValidationError("El nombre es obligatorio.")
+        return nombre
+
+    def clean(self):
+        cleaned = super().clean()
+        inicio = cleaned.get("fecha_inicio")
+        termino = cleaned.get("fecha_termino")
+        if inicio and termino and termino < inicio:
+            self.add_error("fecha_termino", "La fecha de término no puede ser anterior a la fecha de inicio.")
+        return cleaned
+
+
+class DocumentoTributarioForm(forms.ModelForm):
+    class Meta:
+        model = DocumentoTributario
+        fields = ["fecha_emision", "fecha_vencimiento", "cliente", "obra", "tipo_documento", "numero", "neto", "observaciones"]
+        widgets = {
+            "fecha_emision": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"),
+            "fecha_vencimiento": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"),
+            "cliente": forms.Select(attrs={"class": "form-select"}),
+            "obra": forms.Select(attrs={"class": "form-select"}),
+            "tipo_documento": forms.Select(attrs={"class": "form-select"}),
+            "numero": forms.TextInput(attrs={"class": "form-control"}),
+            "neto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01"}),
+            "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        cliente = kwargs.pop("cliente", None)
+        super().__init__(*args, **kwargs)
+        self.fields["fecha_emision"].input_formats = ["%Y-%m-%d"]
+        self.fields["fecha_vencimiento"].input_formats = ["%Y-%m-%d"]
+        self.fields["cliente"].queryset = Cliente.objects.filter(activo=True).order_by("razon_social")
+        self.fields["obra"].queryset = Obra.objects.select_related("cliente").order_by("codigo")
+        self.fields["obra"].required = False
+        if cliente:
+            self.initial["cliente"] = cliente.pk
+
+    def clean_numero(self):
+        numero = (self.cleaned_data.get("numero") or "").strip()
+        if not numero:
+            raise ValidationError("El número es obligatorio.")
+        qs = DocumentoTributario.objects.filter(tipo_documento=self.cleaned_data.get("tipo_documento"), numero=numero)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Ya existe un documento con este tipo y número.")
+        return numero
+
+    def clean(self):
+        cleaned = super().clean()
+        cliente = cleaned.get("cliente")
+        obra = cleaned.get("obra")
+        if obra and cliente and obra.cliente_id != cliente.pk:
+            self.add_error("obra", "La obra seleccionada no pertenece al cliente.")
+        fecha = cleaned.get("fecha_emision")
+        vencimiento = cleaned.get("fecha_vencimiento")
+        if fecha and vencimiento and vencimiento < fecha:
+            self.add_error("fecha_vencimiento", "El vencimiento no puede ser anterior a la emisión.")
+        if fecha and cleaned.get("neto") is not None:
+            tipo = cleaned.get("tipo_documento")
+            if tipo == DocumentoTributario.Tipo.FACTURA_EXENTA:
+                tasa = 0
+                iva = 0
+            else:
+                tasa = valor("IVA", fecha)
+                iva = (cleaned["neto"] * tasa).quantize(Decimal("0.01"))
+            self.instance.tasa_iva_snapshot = tasa
+            self.instance.iva = iva
+            self.instance.total = cleaned["neto"] + iva
+        return cleaned
+
+
+class AnularDocumentoTributarioForm(forms.Form):
+    confirmacion = forms.BooleanField(label="Confirmo la anulación", required=True)
