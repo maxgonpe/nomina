@@ -34,10 +34,10 @@ Orden Bloque 2: `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
 | FAC001 Maestro de clientes | Hecho |
 | FAC002 Obras y centros de costo | Hecho |
 | FAC003 Documentos tributarios de venta | Hecho |
-| FAC004 Motor de cálculo tributario | Pendiente |
-| FAC005 Cobros y estado de pago | Pendiente |
-| FAC006 Consultas y reportes | Pendiente |
-| FAC007 Integración con Impuestos, Finanzas y Excel | Pendiente |
+| FAC004 Motor de cálculo tributario | Hecho |
+| FAC005 Cobros y estado de pago | Hecho |
+| FAC006 Consultas y reportes | Hecho |
+| FAC007 Integración con Impuestos, Finanzas y Excel | Hecho |
 
 #### FAC001 — Maestro de clientes (hecho)
 
@@ -61,6 +61,35 @@ Orden Bloque 2: `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
 - Valida pertenencia cliente/obra, número único, fechas y neto no negativo.
 - Anulación mediante acción específica, conservando el documento histórico.
 - Tests: `facturacion/tests.py` — 10 casos en total.
+
+#### FAC004 — Motor de cálculo tributario (hecho)
+
+- Servicio centralizado en `facturacion/services/documentos.py`.
+- Usa el parámetro vigente `TASA_IVA` y guarda la tasa utilizada en `tasa_iva_snapshot`.
+- Redondea IVA monetario a centavos con `ROUND_HALF_UP`; exentos quedan con IVA cero.
+- Impide recalcular documentos no emitidos o con cobros.
+
+#### FAC005 — Cobros y estado de pago (hecho)
+
+- Registro y edición de cobros desde la ficha del documento.
+- Control de sobrepago y bloqueo para documentos anulados.
+- Estado derivado automáticamente: `EMITIDA`, `PARCIAL` o `PAGADA`.
+- Ficha muestra total facturado, cobrado, saldo y detalle de cobros.
+
+#### FAC007 — Integración con Impuestos, Finanzas y Excel (hecho)
+
+- Interfaces en `facturacion/services/integracion.py`, sin implementar todavía los módulos destino.
+- Salida tributaria por fecha de emisión; salida financiera por fecha efectiva de cobro.
+- Filas Excel normalizadas con `ITEM` de presentación y exclusión de documentos anulados.
+- Tests: `facturacion/tests.py` — 15 casos en total.
+
+#### FAC006 — Consultas y reportes de facturación (hecho)
+
+- Filtros por año, mes, fechas, cliente, obra, tipo, estado y centro de costo.
+- Resumen Django de neto, IVA, total facturado, cobrado, saldo y anulados.
+- Interfaz `/facturacion/resumen/` y servicio `facturacion/services/reportes.py`.
+- Los anulados se muestran, pero no suman en los totales oficiales.
+- Tests: `facturacion/tests.py` — 16 casos en total.
 
 Orden del Bloque 2:
 

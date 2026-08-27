@@ -23,4 +23,7 @@ urlpatterns = [
     path("documentos/<int:pk>/anular/", views.DocumentoTributarioAnularView.as_view(), name="documento_anular"),
     path("clientes/<int:cliente_id>/documentos/", views.DocumentoTributarioListView.as_view(), name="cliente_documentos"),
     path("obras/<int:obra_id>/documentos/", views.DocumentoTributarioListView.as_view(), name="obra_documentos"),
+    path("documentos/<int:documento_id>/cobros/nuevo/", views.CobroDocumentoCreateView.as_view(), name="cobro_crear"),
+    path("cobros/<int:pk>/editar/", views.CobroDocumentoUpdateView.as_view(), name="cobro_editar"),
+    path("resumen/", views.ResumenFacturacionView.as_view(), name="resumen"),
 ]

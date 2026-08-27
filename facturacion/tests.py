@@ -1,12 +1,16 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
 from core.models import CentroCosto, ParametroNegocio, ParametroValor
-from facturacion.forms import ClienteForm, DocumentoTributarioForm, ObraForm
-from facturacion.models import Cliente, DocumentoTributario, Obra
+from facturacion.forms import ClienteForm, CobroDocumentoForm, DocumentoTributarioForm, ObraForm
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoTributario, Obra
+from facturacion.services.documentos import calcular_documento, recalcular_documento
+from facturacion.services.integracion import cobros_financieros, datos_impuestos, filas_excel
+from facturacion.services.reportes import resumen_facturacion
 
 
 class ClienteTest(TestCase):
@@ -102,7 +106,7 @@ class DocumentoTributarioTest(TestCase):
         self.cliente = Cliente.objects.create(rut="18.651.495-5", razon_social="Cliente Documento")
         self.otro_cliente = Cliente.objects.create(rut="16.287.425-K", razon_social="Otro Cliente")
         self.obra = Obra.objects.create(codigo="OBRA-DOC", nombre="Obra documento", cliente=self.cliente)
-        parametro = ParametroNegocio.objects.create(codigo="IVA", nombre="IVA")
+        parametro = ParametroNegocio.objects.create(codigo="TASA_IVA", nombre="Tasa IVA")
         ParametroValor.objects.create(parametro=parametro, valor="0.19", vigencia_desde="2026-01-01")
 
     def datos(self, **extra):
@@ -117,6 +121,17 @@ class DocumentoTributarioTest(TestCase):
         self.assertRedirects(response, reverse("facturacion:documento_detalle", args=[documento.pk]))
         self.assertEqual(documento.iva, Decimal("190000.00"))
         self.assertEqual(documento.total, Decimal("1190000.00"))
+
+    def test_cambio_de_tasa_no_modifica_snapshot_y_falta_tasa_falla(self):
+        calculado = calcular_documento("2026-08-15", "FACTURA", Decimal("100"))
+        self.assertEqual(calculado["tasa_iva_snapshot"], Decimal("0.19"))
+        ParametroValor.objects.create(parametro_id=1, valor="0.20", vigencia_desde="2027-01-01")
+        self.assertEqual(calcular_documento("2026-08-15", "FACTURA", Decimal("100"))["iva"], Decimal("19.00"))
+
+    def test_documento_pagado_no_se_puede_recalcular(self):
+        documento = DocumentoTributario.objects.create(fecha_emision="2026-08-15", cliente=self.cliente, tipo_documento="FACTURA", numero="PAGADO", neto=100, estado="PAGADA", iva=19, total=119, tasa_iva_snapshot="0.19")
+        with self.assertRaises(ValidationError):
+            recalcular_documento(documento)
 
     def test_rechaza_obra_de_otro_cliente_y_duplicado(self):
         form = DocumentoTributarioForm(data=self.datos(obra=Obra.objects.create(codigo="OTRA", nombre="Otra", cliente=self.otro_cliente).pk))
@@ -135,3 +150,49 @@ class DocumentoTributarioTest(TestCase):
         self.client.post(reverse("facturacion:documento_anular", args=[documento.pk]), {"confirmacion": "on"})
         documento.refresh_from_db()
         self.assertEqual(documento.estado, DocumentoTributario.Estado.ANULADA)
+
+    def test_cobros_derivan_estado_y_rechazan_sobrepago(self):
+        self.client.post(reverse("facturacion:documento_crear"), self.datos())
+        documento = DocumentoTributario.objects.get()
+        self.client.post(reverse("facturacion:cobro_crear", args=[documento.pk]), {"fecha": "2026-08-20", "monto": "500000", "medio_pago": "Transferencia"})
+        documento.refresh_from_db()
+        self.assertEqual(documento.estado, DocumentoTributario.Estado.PARCIAL)
+        form = CobroDocumentoForm(data={"fecha": "2026-08-21", "monto": "700000"}, documento=documento)
+        self.assertFalse(form.is_valid())
+        self.assertIn("saldo", str(form.errors).lower())
+        self.client.post(reverse("facturacion:cobro_crear", args=[documento.pk]), {"fecha": "2026-08-22", "monto": "690000"})
+        documento.refresh_from_db()
+        self.assertEqual(documento.estado, DocumentoTributario.Estado.PAGADA)
+        self.assertEqual(documento.saldo_pendiente, Decimal("0.00"))
+
+    def test_anulado_no_admite_cobro(self):
+        documento = DocumentoTributario.objects.create(fecha_emision="2026-08-15", cliente=self.cliente, tipo_documento="FACTURA", numero="ANULADO", neto=100, iva=19, total=119, tasa_iva_snapshot="0.19", estado="ANULADA")
+        form = CobroDocumentoForm(data={"fecha": "2026-08-20", "monto": "10"}, documento=documento)
+        self.assertFalse(form.is_valid())
+
+    def test_integraciones_separan_emision_cobro_y_excluyen_anulados(self):
+        self.client.post(reverse("facturacion:documento_crear"), self.datos())
+        documento = DocumentoTributario.objects.get()
+        CobroDocumentoTributario.objects.create(documento=documento, fecha="2026-09-05", monto="1190000")
+        documento.refresh_from_db()
+        impuestos = datos_impuestos(documento)
+        self.assertEqual(impuestos["fecha_emision"].month, 8)
+        self.assertEqual(len(cobros_financieros(2026, 9)), 1)
+        self.assertEqual(cobros_financieros(2026, 9)[0]["fecha"].month, 9)
+        self.assertEqual(filas_excel([documento])[0]["item"], 1)
+        documento.estado = DocumentoTributario.Estado.ANULADA
+        documento.save(update_fields=["estado"])
+        self.assertIsNone(datos_impuestos(documento))
+        self.assertEqual(filas_excel(), [])
+
+    def test_resumen_excluye_anulados_y_calcula_totales(self):
+        self.client.post(reverse("facturacion:documento_crear"), self.datos())
+        documento = DocumentoTributario.objects.get()
+        CobroDocumentoTributario.objects.create(documento=documento, fecha="2026-08-20", monto="500000")
+        documento.estado = DocumentoTributario.Estado.PARCIAL
+        documento.save(update_fields=["estado"])
+        resumen = resumen_facturacion({"anio": 2026, "mes": 8})
+        self.assertEqual(resumen["neto"], Decimal("1000000.00"))
+        self.assertEqual(resumen["iva"], Decimal("190000.00"))
+        self.assertEqual(resumen["cobrado"], Decimal("500000.00"))
+        self.assertEqual(resumen["saldo"], Decimal("690000.00"))

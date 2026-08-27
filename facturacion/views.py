@@ -4,12 +4,15 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 
 from core.mixins import AuditFormMixin
 from core.validators import normalizar_rut
-from facturacion.forms import AnularDocumentoTributarioForm, ClienteForm, DocumentoTributarioForm, ObraForm
-from facturacion.models import Cliente, DocumentoTributario, Obra
+from facturacion.forms import AnularDocumentoTributarioForm, ClienteForm, CobroDocumentoForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoTributario, Obra
+from facturacion.services.documentos import anular_documento
+from facturacion.services.cobros import registrar_cobro
+from facturacion.services.reportes import filtrar_documentos, resumen_facturacion
 
 
 class ClienteListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -171,7 +174,10 @@ class DocumentoTributarioListView(LoginRequiredMixin, PermissionRequiredMixin, L
     paginate_by = 25
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related("cliente", "obra")
+        formulario = FiltroFacturacionForm(self.request.GET or None)
+        self.filtro_form = formulario
+        filtros = formulario.cleaned_data if formulario.is_valid() else {}
+        queryset = filtrar_documentos(filtros).select_related("cliente", "obra")
         cliente_id = self.kwargs.get("cliente_id")
         obra_id = self.kwargs.get("obra_id")
         if cliente_id:
@@ -192,6 +198,22 @@ class DocumentoTributarioListView(LoginRequiredMixin, PermissionRequiredMixin, L
         context["estados"] = DocumentoTributario.Estado.choices
         context["tipo"] = self.request.GET.get("tipo", "")
         context["estado"] = self.request.GET.get("estado", "")
+        context["filtro_form"] = getattr(self, "filtro_form", FiltroFacturacionForm(self.request.GET or None))
+        return context
+
+
+class ResumenFacturacionView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    permission_required = "facturacion.view_documentotributario"
+    template_name = "facturacion/documentos/resumen.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        form = FiltroFacturacionForm(self.request.GET or None)
+        filtros = form.cleaned_data if form.is_valid() else {}
+        context["form"] = form
+        resumen = resumen_facturacion(filtros)
+        context["resumen"] = resumen
+        context["summary_cards"] = [("Neto facturado", resumen["neto"]), ("IVA ventas", resumen["iva"]), ("Total facturado", resumen["total"]), ("Cobrado", resumen["cobrado"]), ("Saldo", resumen["saldo"])]
         return context
 
 
@@ -247,9 +269,48 @@ class DocumentoTributarioAnularView(LoginRequiredMixin, PermissionRequiredMixin,
         documento = get_object_or_404(DocumentoTributario, pk=pk)
         form = AnularDocumentoTributarioForm(request.POST)
         if form.is_valid():
-            documento.estado = DocumentoTributario.Estado.ANULADA
             documento.actualizado_por = request.user
-            documento.save(update_fields=["estado", "actualizado_por", "actualizado_en"])
+            anular_documento(documento)
+            documento.save(update_fields=["actualizado_por", "actualizado_en"])
             messages.success(request, "Documento tributario anulado.")
             return redirect("facturacion:documento_detalle", pk=documento.pk)
         return render(request, "facturacion/documentos/anular.html", {"documento": documento, "form": form})
+
+
+class CobroDocumentoCreateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, CreateView):
+    permission_required = "facturacion.add_cobrodocumentotributario"
+    model = CobroDocumentoTributario
+    form_class = CobroDocumentoForm
+    template_name = "facturacion/documentos/cobro_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.documento = get_object_or_404(DocumentoTributario, pk=kwargs["documento_id"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["documento"] = self.documento
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.documento = self.documento
+        registrar_cobro(form.instance)
+        messages.success(self.request, "Cobro registrado correctamente.")
+        return redirect("facturacion:documento_detalle", pk=self.documento.pk)
+
+
+class CobroDocumentoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, UpdateView):
+    permission_required = "facturacion.change_cobrodocumentotributario"
+    model = CobroDocumentoTributario
+    form_class = CobroDocumentoForm
+    template_name = "facturacion/documentos/cobro_form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["documento"] = self.object.documento
+        return kwargs
+
+    def form_valid(self, form):
+        registrar_cobro(form.instance)
+        messages.success(self.request, "Cobro actualizado.")
+        return redirect("facturacion:documento_detalle", pk=form.instance.documento_id)

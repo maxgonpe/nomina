@@ -150,8 +150,8 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 ## Estado al corte (27 ago 2026)
 
-**Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)** + **FAC001–FAC003**.
-**Siguiente:** **FAC004 — Motor de cálculo tributario**.
+**Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)** + **FAC001–FAC007**.
+**Siguiente:** Bloque 4 — Impuestos.
 
 | ID | Qué | Estado |
 |----|-----|--------|
@@ -165,7 +165,10 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 | FAC001 | Maestro de clientes | Hecho |
 | FAC002 | Obras y centros de costo | Hecho |
 | FAC003 | Documentos tributarios de venta | Hecho |
-| FAC004–007 | Facturación y compras restantes | Pendiente |
+| FAC004 | Motor de cálculo tributario | Hecho |
+| FAC005 | Cobros y estado de pago | Hecho |
+| FAC006 | Consultas y reportes de facturación | Hecho |
+| FAC007 | Integración con Impuestos, Finanzas y Excel | Hecho |
 
 Modelos listos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`. Finanzas ya tiene FK a `Rendicion` (consumo futuro; no implementar en este bloque).
 

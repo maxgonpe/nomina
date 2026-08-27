@@ -5,8 +5,8 @@ from django.core.exceptions import ValidationError
 
 from core.validators import normalizar_rut, validar_rut
 from core.models import CentroCosto
-from core.services.parametros import valor
-from facturacion.models import Cliente, DocumentoTributario, Obra
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoTributario, Obra
+from facturacion.services.documentos import calcular_documento
 
 
 class ClienteForm(forms.ModelForm):
@@ -155,8 +155,9 @@ class DocumentoTributarioForm(forms.ModelForm):
                 tasa = 0
                 iva = 0
             else:
-                tasa = valor("IVA", fecha)
-                iva = (cleaned["neto"] * tasa).quantize(Decimal("0.01"))
+                importes = calcular_documento(fecha, tipo, cleaned["neto"])
+                tasa = importes["tasa_iva_snapshot"]
+                iva = importes["iva"]
             self.instance.tasa_iva_snapshot = tasa
             self.instance.iva = iva
             self.instance.total = cleaned["neto"] + iva
@@ -165,3 +166,52 @@ class DocumentoTributarioForm(forms.ModelForm):
 
 class AnularDocumentoTributarioForm(forms.Form):
     confirmacion = forms.BooleanField(label="Confirmo la anulación", required=True)
+
+
+class CobroDocumentoForm(forms.ModelForm):
+    class Meta:
+        model = CobroDocumentoTributario
+        fields = ["fecha", "monto", "medio_pago", "referencia", "observaciones"]
+        widgets = {"fecha": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "monto": forms.NumberInput(attrs={"class": "form-control", "min": "0.01", "step": "0.01"}), "medio_pago": forms.TextInput(attrs={"class": "form-control"}), "referencia": forms.TextInput(attrs={"class": "form-control"}), "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3})}
+
+    def __init__(self, *args, documento=None, **kwargs):
+        self.documento = documento or kwargs.get("instance").documento
+        super().__init__(*args, **kwargs)
+        self.fields["fecha"].input_formats = ["%Y-%m-%d"]
+
+    def clean_monto(self):
+        monto = self.cleaned_data["monto"]
+        if monto <= 0:
+            raise ValidationError("El monto debe ser mayor que cero.")
+        cobrado = self.documento.total_cobrado
+        if self.instance.pk:
+            cobrado -= self.instance.monto
+        if cobrado + monto > self.documento.total:
+            raise ValidationError("El cobro excede el saldo pendiente del documento.")
+        return monto
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.documento.estado == DocumentoTributario.Estado.ANULADA:
+            raise ValidationError("No se pueden registrar cobros para un documento anulado.")
+        return cleaned
+
+
+class FiltroFacturacionForm(forms.Form):
+    anio = forms.IntegerField(required=False, min_value=2000, max_value=2100)
+    mes = forms.IntegerField(required=False, min_value=1, max_value=12)
+    desde = forms.DateField(required=False, input_formats=["%Y-%m-%d"])
+    hasta = forms.DateField(required=False, input_formats=["%Y-%m-%d"])
+    cliente = forms.ModelChoiceField(queryset=Cliente.objects.filter(activo=True), required=False)
+    obra = forms.ModelChoiceField(queryset=Obra.objects.all(), required=False)
+    tipo = forms.ChoiceField(choices=[("", "Todos")]+list(DocumentoTributario.Tipo.choices), required=False)
+    estado = forms.ChoiceField(choices=[("", "Todos")]+list(DocumentoTributario.Estado.choices), required=False)
+    centro_costo = forms.ModelChoiceField(queryset=CentroCosto.objects.filter(activo=True), required=False)
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("desde") and cleaned.get("hasta") and cleaned["hasta"] < cleaned["desde"]:
+            raise ValidationError("La fecha hasta no puede ser anterior a la fecha desde.")
+        if cleaned.get("mes") and not cleaned.get("anio"):
+            raise ValidationError("El mes requiere indicar el año.")
+        return cleaned
