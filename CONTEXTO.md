@@ -151,7 +151,7 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 ## Estado al corte (27 ago 2026)
 
 **Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)** + **FAC001–FAC007**.
-**Siguiente:** Bloque 4 — Impuestos.
+**Siguiente:** **COM003 — Pagos a proveedores**.
 
 | ID | Qué | Estado |
 |----|-----|--------|
@@ -169,6 +169,9 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 | FAC005 | Cobros y estado de pago | Hecho |
 | FAC006 | Consultas y reportes de facturación | Hecho |
 | FAC007 | Integración con Impuestos, Finanzas y Excel | Hecho |
+| COM001 | Maestro de proveedores | Hecho |
+| COM002 | Documentos de compra | Hecho |
+| COM003–006 | Compras restantes | Pendiente |
 
 Modelos listos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`. Finanzas ya tiene FK a `Rendicion` (consumo futuro; no implementar en este bloque).
 

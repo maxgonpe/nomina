@@ -6,8 +6,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import CentroCosto, ParametroNegocio, ParametroValor
-from facturacion.forms import ClienteForm, CobroDocumentoForm, DocumentoTributarioForm, ObraForm
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoTributario, Obra
+from facturacion.forms import ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, ObraForm, ProveedorForm
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, Proveedor
 from facturacion.services.documentos import calcular_documento, recalcular_documento
 from facturacion.services.integracion import cobros_financieros, datos_impuestos, filas_excel
 from facturacion.services.reportes import resumen_facturacion
@@ -63,6 +63,57 @@ class ClienteTest(TestCase):
         self.assertNotContains(response, "Inactivo")
         response = self.client.get(reverse("facturacion:cliente_lista"), {"incluir_inactivos": "1"})
         self.assertContains(response, "Inactivo")
+
+
+class ProveedorTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_superuser(username="proveedores", password="clave-segura")
+        self.client.force_login(self.user)
+
+    def test_crear_editar_y_desactivar_proveedor(self):
+        response = self.client.post(reverse("facturacion:proveedor_crear"), {"rut": "18.651.495-5", "razon_social": "  Proveedor   de   Prueba  ", "observaciones": ""})
+        proveedor = Proveedor.objects.get()
+        self.assertRedirects(response, reverse("facturacion:proveedor_detalle", args=[proveedor.pk]))
+        self.assertEqual(proveedor.razon_social, "Proveedor de Prueba")
+        self.client.post(reverse("facturacion:proveedor_editar", args=[proveedor.pk]), {"rut": "18.651.495-5", "razon_social": "Proveedor Editado", "activo": "on"})
+        self.client.post(reverse("facturacion:proveedor_desactivar", args=[proveedor.pk]))
+        proveedor.refresh_from_db()
+        self.assertFalse(proveedor.activo)
+
+    def test_rechaza_rut_invalido_y_duplicado(self):
+        self.assertFalse(ProveedorForm(data={"rut": "18.651.495-6", "razon_social": "Proveedor"}).is_valid())
+        Proveedor.objects.create(rut="18.651.495-5", razon_social="Original")
+        self.assertFalse(ProveedorForm(data={"rut": "18651495-5", "razon_social": "Duplicado"}).is_valid())
+
+    def test_listado_oculta_inactivos_por_defecto(self):
+        Proveedor.objects.create(rut="18.651.495-5", razon_social="Proveedor Inactivo", activo=False)
+        response = self.client.get(reverse("facturacion:proveedor_lista"))
+        self.assertNotContains(response, "Proveedor Inactivo")
+
+
+class DocumentoCompraTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_superuser(username="compras", password="clave-segura")
+        self.client.force_login(self.user)
+        self.proveedor = Proveedor.objects.create(rut="18.651.495-5", razon_social="Proveedor Compra")
+        parametro = ParametroNegocio.objects.create(codigo="TASA_IVA", nombre="Tasa IVA")
+        ParametroValor.objects.create(parametro=parametro, valor="0.19", vigencia_desde="2026-01-01")
+
+    def test_crea_compra_calcula_importes_y_anula(self):
+        response = self.client.post(reverse("facturacion:compra_crear"), {"fecha_documento": "2026-08-15", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "4532", "neto": "1000000", "observaciones": ""})
+        compra = DocumentoCompra.objects.get()
+        self.assertRedirects(response, reverse("facturacion:compra_detalle", args=[compra.pk]))
+        self.assertEqual(compra.iva, Decimal("190000.00"))
+        self.assertEqual(compra.total, Decimal("1190000.00"))
+        self.client.post(reverse("facturacion:compra_anular", args=[compra.pk]))
+        compra.refresh_from_db()
+        self.assertEqual(compra.estado, DocumentoCompra.Estado.ANULADO)
+
+    def test_rechaza_duplicado_y_neto_negativo(self):
+        DocumentoCompra.objects.create(proveedor=self.proveedor, fecha_documento="2026-08-01", tipo_documento="FACTURA", numero="1", neto=1, iva=0, total=1)
+        form = DocumentoCompraForm(data={"fecha_documento": "2026-08-02", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "1", "neto": "2"})
+        self.assertFalse(form.is_valid())
+        self.assertFalse(DocumentoCompraForm(data={"fecha_documento": "2026-08-02", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "2", "neto": "-1"}).is_valid())
 
 
 class ObraTest(TestCase):

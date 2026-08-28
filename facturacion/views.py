@@ -8,10 +8,11 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 
 from core.mixins import AuditFormMixin
 from core.validators import normalizar_rut
-from facturacion.forms import AnularDocumentoTributarioForm, ClienteForm, CobroDocumentoForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoTributario, Obra
+from facturacion.forms import AnularDocumentoTributarioForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, ProveedorForm
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, Proveedor
 from facturacion.services.documentos import anular_documento
 from facturacion.services.cobros import registrar_cobro
+from facturacion.services.documentos_compra import anular_documento_compra
 from facturacion.services.reportes import filtrar_documentos, resumen_facturacion
 
 
@@ -94,6 +95,143 @@ class ClienteDesactivarView(LoginRequiredMixin, PermissionRequiredMixin, View):
         else:
             messages.info(request, "El cliente ya estaba inactivo.")
         return redirect("facturacion:cliente_detalle", pk=cliente.pk)
+
+
+class ProveedorListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = "facturacion.view_proveedor"
+    model = Proveedor
+    context_object_name = "proveedores"
+    template_name = "facturacion/proveedores/lista.html"
+    paginate_by = 25
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.GET.get("incluir_inactivos") != "1":
+            queryset = queryset.filter(activo=True)
+        consulta = self.request.GET.get("q", "").strip()
+        if consulta:
+            queryset = queryset.filter(Q(razon_social__icontains=consulta) | Q(rut__icontains=consulta) | Q(rut_normalizado__icontains=normalizar_rut(consulta)))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q"] = self.request.GET.get("q", "").strip()
+        context["incluir_inactivos"] = self.request.GET.get("incluir_inactivos") == "1"
+        return context
+
+
+class ProveedorCreateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, CreateView):
+    permission_required = "facturacion.add_proveedor"
+    model = Proveedor
+    form_class = ProveedorForm
+    template_name = "facturacion/proveedores/form.html"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Proveedor creado correctamente.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("facturacion:proveedor_detalle", args=[self.object.pk])
+
+
+class ProveedorDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    permission_required = "facturacion.view_proveedor"
+    model = Proveedor
+    context_object_name = "proveedor"
+    template_name = "facturacion/proveedores/detalle.html"
+
+
+class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, UpdateView):
+    permission_required = "facturacion.change_proveedor"
+    model = Proveedor
+    form_class = ProveedorForm
+    template_name = "facturacion/proveedores/form.html"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Proveedor actualizado.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("facturacion:proveedor_detalle", args=[self.object.pk])
+
+
+class ProveedorDesactivarView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "facturacion.delete_proveedor"
+
+    def get(self, request, pk):
+        proveedor = get_object_or_404(Proveedor, pk=pk)
+        return render(request, "facturacion/proveedores/confirmar_desactivacion.html", {"proveedor": proveedor})
+
+    def post(self, request, pk):
+        proveedor = get_object_or_404(Proveedor, pk=pk)
+        proveedor.activo = False
+        proveedor.actualizado_por = request.user
+        proveedor.save(update_fields=["activo", "actualizado_por", "actualizado_en"])
+        messages.success(request, "Proveedor desactivado. El histórico se conserva.")
+        return redirect("facturacion:proveedor_detalle", pk=proveedor.pk)
+
+
+class DocumentoCompraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = "facturacion.view_documentocompra"
+    model = DocumentoCompra
+    context_object_name = "compras"
+    template_name = "facturacion/compras/lista.html"
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("proveedor", "centro_costo")
+        if self.kwargs.get("proveedor_id"):
+            qs = qs.filter(proveedor_id=self.kwargs["proveedor_id"])
+        if self.request.GET.get("estado"):
+            qs = qs.filter(estado=self.request.GET["estado"])
+        return qs
+
+
+class DocumentoCompraCreateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, CreateView):
+    permission_required = "facturacion.add_documentocompra"
+    model = DocumentoCompra
+    form_class = DocumentoCompraForm
+    template_name = "facturacion/compras/form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if self.kwargs.get("proveedor_id"):
+            kwargs["proveedor"] = get_object_or_404(Proveedor, pk=self.kwargs["proveedor_id"])
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(self.request, "Documento de compra registrado correctamente.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("facturacion:compra_detalle", args=[self.object.pk])
+
+
+class DocumentoCompraDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    permission_required = "facturacion.view_documentocompra"
+    model = DocumentoCompra
+    context_object_name = "compra"
+    template_name = "facturacion/compras/detalle.html"
+
+
+class DocumentoCompraUpdateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, UpdateView):
+    permission_required = "facturacion.change_documentocompra"
+    model = DocumentoCompra
+    form_class = DocumentoCompraForm
+    template_name = "facturacion/compras/form.html"
+
+    def get_success_url(self):
+        return reverse("facturacion:compra_detalle", args=[self.object.pk])
+
+
+class DocumentoCompraAnularView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "facturacion.change_documentocompra"
+
+    def post(self, request, pk):
+        compra = get_object_or_404(DocumentoCompra, pk=pk)
+        anular_documento_compra(compra)
+        messages.success(request, "Documento de compra anulado.")
+        return redirect("facturacion:compra_detalle", pk=pk)
 
 
 class ObraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

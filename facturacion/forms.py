@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 from core.validators import normalizar_rut, validar_rut
 from core.models import CentroCosto
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoTributario, Obra
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, Proveedor
 from facturacion.services.documentos import calcular_documento
 
 
@@ -46,6 +46,39 @@ class ClienteForm(forms.ModelForm):
         if not self.instance.pk and "activo" not in self.data:
             return True
         return activo
+
+
+class ProveedorForm(forms.ModelForm):
+    class Meta:
+        model = Proveedor
+        fields = ["rut", "razon_social", "activo", "observaciones"]
+        widgets = {
+            "rut": forms.TextInput(attrs={"class": "form-control", "placeholder": "76.123.456-7", "autocomplete": "off"}),
+            "razon_social": forms.TextInput(attrs={"class": "form-control"}),
+            "activo": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+    def clean_rut(self):
+        rut = self.cleaned_data["rut"]
+        validar_rut(rut)
+        qs = Proveedor.objects.filter(rut_normalizado=normalizar_rut(rut))
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Ya existe un proveedor con este RUT.")
+        return rut.strip()
+
+    def clean_razon_social(self):
+        razon = " ".join((self.cleaned_data.get("razon_social") or "").split())
+        if not razon:
+            raise ValidationError("La razón social es obligatoria.")
+        return razon
+
+    def clean_activo(self):
+        if not self.instance.pk and "activo" not in self.data:
+            return True
+        return self.cleaned_data.get("activo")
 
 
 class ObraForm(forms.ModelForm):
@@ -214,4 +247,53 @@ class FiltroFacturacionForm(forms.Form):
             raise ValidationError("La fecha hasta no puede ser anterior a la fecha desde.")
         if cleaned.get("mes") and not cleaned.get("anio"):
             raise ValidationError("El mes requiere indicar el año.")
+        return cleaned
+
+
+class DocumentoCompraForm(forms.ModelForm):
+    class Meta:
+        model = DocumentoCompra
+        fields = ["fecha_documento", "fecha_recepcion", "proveedor", "tipo_documento", "numero", "centro_costo", "neto", "archivo", "observaciones"]
+        widgets = {"fecha_documento": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "fecha_recepcion": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "proveedor": forms.Select(attrs={"class": "form-select"}), "tipo_documento": forms.TextInput(attrs={"class": "form-control"}), "numero": forms.TextInput(attrs={"class": "form-control"}), "centro_costo": forms.Select(attrs={"class": "form-select"}), "neto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01"}), "archivo": forms.ClearableFileInput(attrs={"class": "form-control"}), "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3})}
+
+    def __init__(self, *args, proveedor=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in ("fecha_documento", "fecha_recepcion"):
+            self.fields[campo].input_formats = ["%Y-%m-%d"]
+        self.fields["proveedor"].queryset = Proveedor.objects.filter(activo=True).order_by("razon_social")
+        self.fields["centro_costo"].queryset = CentroCosto.objects.filter(activo=True).order_by("codigo")
+        self.fields["centro_costo"].required = False
+        if proveedor:
+            self.initial["proveedor"] = proveedor.pk
+
+    def clean_numero(self):
+        numero = (self.cleaned_data.get("numero") or "").strip()
+        if not numero:
+            raise ValidationError("El número es obligatorio.")
+        qs = DocumentoCompra.objects.filter(proveedor=self.cleaned_data.get("proveedor"), tipo_documento=self.cleaned_data.get("tipo_documento"), numero=numero)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Ya existe un documento con este proveedor, tipo y número.")
+        return numero
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data.get("archivo")
+        if archivo:
+            if archivo.size > 10 * 1024 * 1024:
+                raise ValidationError("El archivo no puede superar 10 MB.")
+            if archivo.name.lower().rsplit(".", 1)[-1] not in {"pdf", "jpg", "jpeg", "png"}:
+                raise ValidationError("El archivo debe ser PDF, JPG, JPEG o PNG.")
+        return archivo
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("fecha_documento") and cleaned.get("fecha_recepcion") and cleaned["fecha_recepcion"] < cleaned["fecha_documento"]:
+            self.add_error("fecha_recepcion", "La recepción no puede ser anterior al documento.")
+        if cleaned.get("neto") is not None:
+            from facturacion.services.documentos_compra import calcular_documento_compra
+            importes = calcular_documento_compra(cleaned.get("fecha_documento"), cleaned.get("tipo_documento"), cleaned["neto"])
+            self.instance.tasa_iva_snapshot = importes["tasa_iva_snapshot"]
+            self.instance.iva = importes["iva"]
+            self.instance.total = importes["total"]
         return cleaned

@@ -1,6 +1,6 @@
 # Seguimiento del desarrollo
 
-Punto de corte: **27 de agosto de 2026**, al cerrar **FAC001 — Maestro de clientes**.
+Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de proveedores**.
 
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
@@ -38,6 +38,34 @@ Orden Bloque 2: `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
 | FAC005 Cobros y estado de pago | Hecho |
 | FAC006 Consultas y reportes | Hecho |
 | FAC007 Integración con Impuestos, Finanzas y Excel | Hecho |
+
+### Bloque 4 — Compras y proveedores
+
+| Ítem | Estado |
+|------|--------|
+| COM001 Maestro de proveedores | Hecho |
+| COM002 Documentos de compra | Hecho |
+| COM003 Pagos a proveedores | Pendiente |
+| COM004 IVA de compras | Pendiente |
+| COM005 Consultas y reportes de compras | Pendiente |
+| COM006 Integración con Impuestos, Finanzas y Excel | Pendiente |
+
+#### COM001 — Maestro de proveedores (hecho)
+
+- CRUD en `/facturacion/proveedores/` con listar, crear, consultar, editar y desactivar.
+- RUT chileno validado y normalizado; razón social con espacios normalizados.
+- Soft-delete mediante `activo=False`; el proveedor histórico no se elimina.
+- Permisos Django `view_proveedor`, `add_proveedor`, `change_proveedor` y `delete_proveedor`.
+- Tests agregados en `facturacion/tests.py`.
+
+#### COM002 — Documentos de compra (hecho)
+
+- CRUD en `/facturacion/compras/` y listado por proveedor.
+- IVA y total calculados en servidor mediante `TASA_IVA`; documentos exentos quedan con IVA cero.
+- Validación de proveedor, número único por proveedor/tipo, fechas y neto no negativo.
+- Adjuntos PDF/JPG/JPEG/PNG de hasta 10 MB.
+- Anulación controlada; el estado de pago queda reservado para COM003.
+- Tests: `facturacion/tests.py` — 21 casos en total.
 
 #### FAC001 — Maestro de clientes (hecho)
 
