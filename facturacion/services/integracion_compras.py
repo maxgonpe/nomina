@@ -21,6 +21,7 @@ def documentos_para_impuestos(fecha_desde=None, fecha_hasta=None):
             "iva": documento.iva * signo,
             "total": documento.total * signo,
             "centro_costo": documento.centro_costo,
+            "categoria_compra": documento.categoria_compra,
             "estado": documento.estado,
             "anulado": False,
             "signo": signo,

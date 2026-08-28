@@ -17,6 +17,11 @@ from core.models import AuditModel
 
 class CategoriaFinanciera(AuditModel):
 
+    class GrupoFlujo(models.TextChoices):
+        OPERACION = "OPERACION", "Operación"
+        INVERSION = "INVERSION", "Inversión"
+        FINANCIAMIENTO = "FINANCIAMIENTO", "Financiamiento"
+
     class Tipo(models.TextChoices):
         INGRESO = "INGRESO", "Ingreso"
         EGRESO = "EGRESO", "Egreso"
@@ -54,6 +59,14 @@ class CategoriaFinanciera(AuditModel):
     )
 
     permite_manual = models.BooleanField(default=False)
+
+    grupo_flujo = models.CharField(
+        max_length=20,
+        choices=GrupoFlujo.choices,
+        default=GrupoFlujo.OPERACION,
+    )
+
+    afecta_resultado = models.BooleanField(default=True)
 
     descripcion = models.TextField(
         blank=True,
@@ -377,7 +390,7 @@ class ObligacionFinanciera(AuditModel):
 
     @property
     def total_pagado(self):
-        total = self.pagos.aggregate(
+        total = self.pagos.filter(anulado=False).aggregate(
             total=Sum("monto")
         )["total"]
 
@@ -389,6 +402,10 @@ class ObligacionFinanciera(AuditModel):
             self.monto_total
             - self.total_pagado
         )
+
+    def saldo_a_fecha(self, fecha_corte):
+        total = self.pagos.filter(anulado=False, fecha__lte=fecha_corte).aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
+        return self.monto_total - total
 
     def __str__(self):
         return self.descripcion
@@ -412,6 +429,13 @@ class PagoObligacionFinanciera(AuditModel):
         max_length=150,
         blank=True,
     )
+
+    medio_pago = models.CharField(max_length=50, blank=True)
+    observaciones = models.TextField(blank=True)
+    anulado = models.BooleanField(default=False)
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="pagos_obligacion_anulados")
+    motivo_anulacion = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-fecha"]

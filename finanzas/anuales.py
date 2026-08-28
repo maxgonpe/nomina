@@ -47,6 +47,17 @@ def totales_por_origen(anio, **filtros):
     return list(grupos.values())
 
 
+def totales_por_grupo_flujo(anio, **filtros):
+    grupos = {}
+    for movimiento in reporte_anual(anio, **filtros)["movimientos"]:
+        clave = movimiento.categoria.grupo_flujo
+        fila = grupos.setdefault(clave, {"grupo_flujo": clave, "ingresos": Decimal("0.00"), "egresos": Decimal("0.00"), "resultado": Decimal("0.00")})
+        fila["ingresos" if movimiento.tipo == MovimientoFinanciero.Tipo.INGRESO else "egresos"] += movimiento.monto
+        if movimiento.categoria.afecta_resultado:
+            fila["resultado"] += movimiento.monto if movimiento.tipo == MovimientoFinanciero.Tipo.INGRESO else -movimiento.monto
+    return list(grupos.values())
+
+
 def filas_exportacion_finanzas(anio, **filtros):
     return [{"anio": anio, "mes": fila["mes"], "ingresos": fila["ingresos"], "egresos": fila["egresos"], "resultado": fila["resultado"], "saldo_inicial": fila["saldo_inicial"], "saldo_final": fila["saldo_final"], "tiene_datos": fila["tiene_datos"]} for fila in reporte_anual(anio, **filtros)["meses"]]
 

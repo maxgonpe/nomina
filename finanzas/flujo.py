@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-from finanzas.models import CierreFinancieroMensual, MovimientoFinanciero
+from finanzas.models import CategoriaFinanciera, CierreFinancieroMensual, MovimientoFinanciero
 
 
 def movimientos_vigentes(fecha_desde=None, fecha_hasta=None):
@@ -38,6 +38,22 @@ def totales_por_categoria(anio, mes):
         grupo = grupos.setdefault(movimiento.categoria_id, {"categoria": movimiento.categoria, "ingresos": Decimal("0.00"), "egresos": Decimal("0.00")})
         grupo["ingresos" if movimiento.tipo == "INGRESO" else "egresos"] += movimiento.monto
     return list(grupos.values())
+
+
+def totales_por_grupo(anio, mes):
+    grupos = {}
+    for movimiento in flujo_mensual(anio, mes)["movimientos"]:
+        clave = movimiento.categoria.grupo_flujo
+        grupo = grupos.setdefault(clave, {"grupo_flujo": clave, "ingresos": Decimal("0.00"), "egresos": Decimal("0.00"), "resultado": Decimal("0.00")})
+        grupo["ingresos" if movimiento.tipo == MovimientoFinanciero.Tipo.INGRESO else "egresos"] += movimiento.monto
+        if movimiento.categoria.afecta_resultado:
+            grupo["resultado"] += movimiento.monto if movimiento.tipo == MovimientoFinanciero.Tipo.INGRESO else -movimiento.monto
+    return list(grupos.values())
+
+
+def resultado_operacional(anio, mes):
+    movimientos = flujo_mensual(anio, mes)["movimientos"]
+    return sum((m.monto if m.tipo == MovimientoFinanciero.Tipo.INGRESO else -m.monto for m in movimientos if m.categoria.grupo_flujo == CategoriaFinanciera.GrupoFlujo.OPERACION and m.categoria.afecta_resultado), Decimal("0.00"))
 
 
 def totales_por_centro(anio, mes):

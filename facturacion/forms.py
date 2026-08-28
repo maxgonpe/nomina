@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 from core.validators import normalizar_rut, validar_rut
 from core.models import CentroCosto
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
+from facturacion.models import CategoriaCompra, Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.forms_reportes import FiltroComprasForm
 from facturacion.services.documentos import calcular_documento
 
@@ -75,6 +75,31 @@ class ProveedorForm(forms.ModelForm):
         if not razon:
             raise ValidationError("La razón social es obligatoria.")
         return razon
+
+
+class CategoriaCompraForm(forms.ModelForm):
+    class Meta:
+        model = CategoriaCompra
+        fields = ["codigo", "nombre", "descripcion", "activa", "orden"]
+        widgets = {
+            "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "nombre": forms.TextInput(attrs={"class": "form-control"}),
+            "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "activa": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "orden": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
+        }
+
+    def clean_codigo(self):
+        codigo = (self.cleaned_data.get("codigo") or "").strip().upper()
+        if not codigo:
+            raise ValidationError("El código es obligatorio.")
+        return codigo
+
+    def clean_nombre(self):
+        nombre = " ".join((self.cleaned_data.get("nombre") or "").split())
+        if not nombre:
+            raise ValidationError("El nombre es obligatorio.")
+        return nombre
 
     def clean_activo(self):
         if not self.instance.pk and "activo" not in self.data:
@@ -271,14 +296,18 @@ class FiltroFacturacionForm(forms.Form):
 class DocumentoCompraForm(forms.ModelForm):
     class Meta:
         model = DocumentoCompra
-        fields = ["fecha_documento", "fecha_recepcion", "proveedor", "tipo_documento", "numero", "centro_costo", "neto", "archivo", "observaciones"]
-        widgets = {"fecha_documento": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "fecha_recepcion": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "proveedor": forms.Select(attrs={"class": "form-select"}), "tipo_documento": forms.TextInput(attrs={"class": "form-control"}), "numero": forms.TextInput(attrs={"class": "form-control"}), "centro_costo": forms.Select(attrs={"class": "form-select"}), "neto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01"}), "archivo": forms.ClearableFileInput(attrs={"class": "form-control"}), "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3})}
+        fields = ["fecha_documento", "fecha_recepcion", "proveedor", "categoria_compra", "tipo_documento", "numero", "centro_costo", "neto", "archivo", "observaciones"]
+        widgets = {"fecha_documento": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "fecha_recepcion": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "proveedor": forms.Select(attrs={"class": "form-select"}), "categoria_compra": forms.Select(attrs={"class": "form-select"}), "tipo_documento": forms.TextInput(attrs={"class": "form-control"}), "numero": forms.TextInput(attrs={"class": "form-control"}), "centro_costo": forms.Select(attrs={"class": "form-select"}), "neto": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01"}), "archivo": forms.ClearableFileInput(attrs={"class": "form-control"}), "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3})}
 
     def __init__(self, *args, proveedor=None, **kwargs):
         super().__init__(*args, **kwargs)
         for campo in ("fecha_documento", "fecha_recepcion"):
             self.fields[campo].input_formats = ["%Y-%m-%d"]
         self.fields["proveedor"].queryset = Proveedor.objects.filter(activo=True).order_by("razon_social")
+        self.fields["categoria_compra"].queryset = CategoriaCompra.objects.filter(activa=True).order_by("orden", "codigo")
+        self.fields["categoria_compra"].required = False
+        if not self.instance.pk:
+            self.initial["categoria_compra"] = CategoriaCompra.objects.filter(codigo="SIN_CLASIFICAR").first()
         self.fields["centro_costo"].queryset = CentroCosto.objects.filter(activo=True).order_by("codigo")
         self.fields["centro_costo"].required = False
         if proveedor:
@@ -306,6 +335,8 @@ class DocumentoCompraForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if not self.instance.pk and not cleaned.get("categoria_compra"):
+            cleaned["categoria_compra"] = CategoriaCompra.objects.get(codigo="SIN_CLASIFICAR")
         if cleaned.get("fecha_documento") and cleaned.get("fecha_recepcion") and cleaned["fecha_recepcion"] < cleaned["fecha_documento"]:
             self.add_error("fecha_recepcion", "La recepción no puede ser anterior al documento.")
         if cleaned.get("neto") is not None:

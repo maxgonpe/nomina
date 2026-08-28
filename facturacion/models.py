@@ -368,6 +368,24 @@ class Proveedor(AuditModel):
         return self.razon_social
 
 
+class CategoriaCompra(AuditModel):
+    codigo = models.CharField(max_length=50, unique=True)
+    nombre = models.CharField(max_length=150)
+    descripcion = models.TextField(blank=True)
+    activa = models.BooleanField(default=True)
+    orden = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["orden", "codigo"]
+
+    def save(self, *args, **kwargs):
+        self.codigo = self.codigo.strip().upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
 class DocumentoCompra(AuditModel):
 
     class Estado(models.TextChoices):
@@ -389,6 +407,14 @@ class DocumentoCompra(AuditModel):
         Proveedor,
         on_delete=models.PROTECT,
         related_name="documentos_compra",
+    )
+
+    categoria_compra = models.ForeignKey(
+        CategoriaCompra,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="documentos",
     )
 
     tipo_documento = models.CharField(

@@ -16,12 +16,16 @@ def saldo_documento(documento, fecha_corte=None):
 
 def documentos_filtrados(**filtros):
     base = documentos_del_periodo(**{k: v for k, v in filtros.items() if k in {"fecha_desde", "fecha_hasta", "proveedor", "centro_costo", "tipo_documento"}})
+    if filtros.get("categoria_compra"):
+        base = base.filter(categoria_compra=filtros["categoria_compra"])
     if filtros.get("estado") == DocumentoCompra.Estado.ANULADO:
         base = DocumentoCompra.objects.select_related("proveedor", "centro_costo").filter(estado=filtros["estado"])
         if filtros.get("fecha_desde"): base = base.filter(fecha_documento__gte=filtros["fecha_desde"])
         if filtros.get("fecha_hasta"): base = base.filter(fecha_documento__lte=filtros["fecha_hasta"])
         for campo in ("proveedor", "centro_costo", "tipo_documento"):
             if filtros.get(campo): base = base.filter(**{campo: filtros[campo]})
+        if filtros.get("categoria_compra"):
+            base = base.filter(categoria_compra=filtros["categoria_compra"])
     elif filtros.get("estado"):
         base = base.filter(estado=filtros["estado"])
     return base
@@ -58,6 +62,10 @@ def totales_por_centro(fecha_corte=None, **filtros):
     return _agrupado(documentos_filtrados(**filtros), "centro_costo", fecha_corte)
 
 
+def totales_por_categoria_compra(fecha_corte=None, **filtros):
+    return _agrupado(documentos_filtrados(**filtros), "categoria_compra", fecha_corte)
+
+
 def totales_por_estado(fecha_corte=None, **filtros):
     grupos = {}
     for documento in documentos_filtrados(**filtros):
@@ -82,4 +90,4 @@ def pagos_del_periodo(fecha_desde=None, fecha_hasta=None, proveedor=None):
 
 
 def filas_exportacion_compras(fecha_corte=None, **filtros):
-    return [{"fecha_documento": d.fecha_documento, "fecha_recepcion": d.fecha_recepcion, "rut_proveedor": d.proveedor.rut, "proveedor": d.proveedor.razon_social, "tipo": d.tipo_documento, "numero": d.numero, "centro_costo": d.centro_costo.codigo if d.centro_costo else "", "neto": d.neto, "iva": d.iva, "total": d.total, "pagado": d.total - saldo_documento(d, fecha_corte), "saldo": saldo_documento(d, fecha_corte), "estado": d.estado} for d in documentos_filtrados(**filtros)]
+    return [{"fecha_documento": d.fecha_documento, "fecha_recepcion": d.fecha_recepcion, "rut_proveedor": d.proveedor.rut, "proveedor": d.proveedor.razon_social, "categoria_compra": d.categoria_compra.codigo if d.categoria_compra else "SIN_CLASIFICAR", "tipo": d.tipo_documento, "numero": d.numero, "centro_costo": d.centro_costo.codigo if d.centro_costo else "", "neto": d.neto, "iva": d.iva, "total": d.total, "pagado": d.total - saldo_documento(d, fecha_corte), "saldo": saldo_documento(d, fecha_corte), "estado": d.estado} for d in documentos_filtrados(**filtros)]

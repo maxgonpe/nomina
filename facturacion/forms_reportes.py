@@ -1,7 +1,7 @@
 from django import forms
 
 from core.models import CentroCosto
-from facturacion.models import Proveedor, DocumentoCompra
+from facturacion.models import CategoriaCompra, Proveedor, DocumentoCompra
 
 
 class FiltroComprasForm(forms.Form):
@@ -10,6 +10,7 @@ class FiltroComprasForm(forms.Form):
     fecha_desde = forms.DateField(required=False, input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}))
     fecha_hasta = forms.DateField(required=False, input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}))
     proveedor = forms.ModelChoiceField(queryset=Proveedor.objects.filter(activo=True), required=False)
+    categoria_compra = forms.ModelChoiceField(queryset=CategoriaCompra.objects.filter(activa=True), required=False)
     centro_costo = forms.ModelChoiceField(queryset=CentroCosto.objects.filter(activo=True), required=False)
     tipo_documento = forms.ChoiceField(choices=[], required=False)
     estado = forms.ChoiceField(choices=[("", "Todos")] + list(DocumentoCompra.Estado.choices), required=False)

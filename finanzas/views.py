@@ -23,6 +23,8 @@ class MovimientoFinancieroListView(LoginRequiredMixin, PermissionRequiredMixin, 
             for campo in ("tipo", "origen", "categoria"):
                 if filtros.get(campo):
                     movimientos = movimientos.filter(**{campo: filtros[campo]})
+            if filtros.get("grupo_flujo"):
+                movimientos = movimientos.filter(categoria__grupo_flujo=filtros["grupo_flujo"])
             if filtros.get("estado") == "ANULADO":
                 movimientos = movimientos.filter(anulado=True)
             elif filtros.get("estado") != "TODOS":

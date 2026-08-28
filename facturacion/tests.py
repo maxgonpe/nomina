@@ -6,11 +6,12 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import CentroCosto, ParametroNegocio, ParametroValor
-from facturacion.forms import ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
+from facturacion.forms import CategoriaCompraForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
+from facturacion.models import CategoriaCompra, Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.services.documentos import calcular_documento, recalcular_documento
 from facturacion.services.integracion import cobros_financieros, datos_impuestos, filas_excel
 from facturacion.services.reportes import resumen_facturacion
+from facturacion.services.reportes_compras import totales_por_categoria_compra
 
 
 class ClienteTest(TestCase):
@@ -98,6 +99,30 @@ class DocumentoCompraTest(TestCase):
         self.proveedor = Proveedor.objects.create(rut="18.651.495-5", razon_social="Proveedor Compra")
         parametro = ParametroNegocio.objects.create(codigo="TASA_IVA", nombre="Tasa IVA")
         ParametroValor.objects.create(parametro=parametro, valor="0.19", vigencia_desde="2026-01-01")
+
+    def test_alta_sin_categoria_queda_sin_clasificar(self):
+        form = DocumentoCompraForm(data={"fecha_documento": "2026-08-15", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "SIN-1", "neto": "100"})
+        self.assertTrue(form.is_valid(), form.errors)
+        compra = form.save()
+        self.assertEqual(compra.categoria_compra.codigo, "SIN_CLASIFICAR")
+
+    def test_clasificacion_agrupa_independiente_del_proveedor(self):
+        materiales = CategoriaCompra.objects.get(codigo="MAT_MATERIALES")
+        combustible = CategoriaCompra.objects.get(codigo="GAS_COMBUSTIBLE")
+        otro = Proveedor.objects.create(rut="16.287.425-K", razon_social="Otro proveedor")
+        DocumentoCompra.objects.create(proveedor=self.proveedor, categoria_compra=materiales, fecha_documento="2026-08-01", tipo_documento="FACTURA", numero="MAT-1", neto=100, iva=19, total=119)
+        DocumentoCompra.objects.create(proveedor=otro, categoria_compra=materiales, fecha_documento="2026-08-02", tipo_documento="FACTURA", numero="MAT-2", neto=200, iva=38, total=238)
+        DocumentoCompra.objects.create(proveedor=self.proveedor, categoria_compra=combustible, fecha_documento="2026-08-03", tipo_documento="FACTURA", numero="GAS-1", neto=50, iva=9.5, total=59.5)
+        grupos = {fila["categoria_compra"].codigo: fila["neto"] for fila in totales_por_categoria_compra()}
+        self.assertEqual(grupos["MAT_MATERIALES"], Decimal("300"))
+        self.assertEqual(grupos["GAS_COMBUSTIBLE"], Decimal("50"))
+
+    def test_categoria_inactiva_no_se_ofrece_en_nuevas_compras(self):
+        categoria = CategoriaCompra.objects.get(codigo="MAT_MATERIALES")
+        categoria.activa = False
+        categoria.save()
+        form = DocumentoCompraForm()
+        self.assertNotIn(categoria, form.fields["categoria_compra"].queryset)
 
     def test_crea_compra_calcula_importes_y_anula(self):
         response = self.client.post(reverse("facturacion:compra_crear"), {"fecha_documento": "2026-08-15", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "4532", "neto": "1000000", "observaciones": ""})

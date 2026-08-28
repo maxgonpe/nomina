@@ -21,6 +21,7 @@ class FiltroMovimientosFinancierosForm(forms.Form):
     fecha_hasta = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     tipo = forms.ChoiceField(required=False, choices=[("", "Todos")] + list(MovimientoFinanciero.Tipo.choices))
     origen = forms.ChoiceField(required=False, choices=[("", "Todos")] + list(MovimientoFinanciero.Origen.choices))
+    grupo_flujo = forms.ChoiceField(required=False, choices=[("", "Todos")] + list(CategoriaFinanciera.GrupoFlujo.choices))
     categoria = forms.ModelChoiceField(required=False, queryset=CategoriaFinanciera.objects.filter(activo=True))
     estado = forms.ChoiceField(required=False, choices=[("", "Vigentes"), ("ANULADO", "Anulados"), ("TODOS", "Todos")])
 

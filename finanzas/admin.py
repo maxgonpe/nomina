@@ -11,8 +11,8 @@ from finanzas.models import (
 
 @admin.register(CategoriaFinanciera)
 class CategoriaFinancieraAdmin(admin.ModelAdmin):
-    list_display = ("codigo", "nombre", "tipo", "activo", "permite_manual")
-    list_filter = ("tipo", "activo")
+    list_display = ("codigo", "nombre", "tipo", "grupo_flujo", "afecta_resultado", "activo", "permite_manual")
+    list_filter = ("tipo", "grupo_flujo", "afecta_resultado", "activo")
     search_fields = ("codigo", "nombre")
 
 
@@ -36,4 +36,5 @@ class ObligacionFinancieraAdmin(admin.ModelAdmin):
 
 @admin.register(PagoObligacionFinanciera)
 class PagoObligacionFinancieraAdmin(admin.ModelAdmin):
-    list_display = ("obligacion", "fecha", "monto")
+    list_display = ("obligacion", "fecha", "monto", "anulado")
+    list_filter = ("anulado",)

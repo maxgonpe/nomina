@@ -8,8 +8,8 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 
 from core.mixins import AuditFormMixin
 from core.validators import normalizar_rut
-from facturacion.forms import AnularCobroDocumentoForm, AnularDocumentoCompraForm, AnularDocumentoTributarioForm, AnularPagoDocumentoCompraForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
+from facturacion.forms import AnularCobroDocumentoForm, AnularDocumentoCompraForm, AnularDocumentoTributarioForm, AnularPagoDocumentoCompraForm, CategoriaCompraForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
+from facturacion.models import CategoriaCompra, Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.services.documentos import anular_documento
 from facturacion.services.cobros import anular_cobro, registrar_cobro
 from facturacion.services.documentos_compra import anular_documento_compra
@@ -186,6 +186,39 @@ class ProveedorDesactivarView(LoginRequiredMixin, PermissionRequiredMixin, View)
         return redirect("facturacion:proveedor_detalle", pk=proveedor.pk)
 
 
+class CategoriaCompraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    permission_required = "facturacion.view_categoriacompra"
+    model = CategoriaCompra
+    context_object_name = "categorias"
+    template_name = "facturacion/compras/categorias_lista.html"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.GET.get("incluir_inactivas") != "1":
+            qs = qs.filter(activa=True)
+        return qs
+
+
+class CategoriaCompraCreateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, CreateView):
+    permission_required = "facturacion.add_categoriacompra"
+    model = CategoriaCompra
+    form_class = CategoriaCompraForm
+    template_name = "facturacion/compras/categoria_form.html"
+
+    def get_success_url(self):
+        return reverse("facturacion:categoria_compra_lista")
+
+
+class CategoriaCompraUpdateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, UpdateView):
+    permission_required = "facturacion.change_categoriacompra"
+    model = CategoriaCompra
+    form_class = CategoriaCompraForm
+    template_name = "facturacion/compras/categoria_form.html"
+
+    def get_success_url(self):
+        return reverse("facturacion:categoria_compra_lista")
+
+
 class DocumentoCompraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = "facturacion.view_documentocompra"
     model = DocumentoCompra
@@ -199,6 +232,8 @@ class DocumentoCompraListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
             qs = qs.filter(proveedor_id=self.kwargs["proveedor_id"])
         if self.request.GET.get("estado"):
             qs = qs.filter(estado=self.request.GET["estado"])
+        if self.request.GET.get("categoria_compra"):
+            qs = qs.filter(categoria_compra_id=self.request.GET["categoria_compra"])
         return qs
 
 

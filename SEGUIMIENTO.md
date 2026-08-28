@@ -217,6 +217,40 @@ Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de prov
 - El menú principal ahora incluye el enlace `Finanzas`.
 - El listado distingue movimientos vigentes y anulados, y conserva la entrada separada para movimientos manuales.
 
+### PRE-BAL01 — Clasificación económica de compras (hecho)
+
+- Se agregó `CategoriaCompra` como catálogo independiente de proveedor, centro de costo y categoría financiera.
+- `DocumentoCompra` conserva la categoría económica; los documentos históricos pueden permanecer sin clasificación.
+- Se cargaron categorías base, incluyendo `SIN_CLASIFICAR`, mediante migración idempotente.
+- Las altas nuevas usan `SIN_CLASIFICAR` si no se informa una categoría, permitiendo detectar y completar pendientes sin bloquear la migración histórica.
+- Se agregaron catálogo administrativo, filtro, agrupación por categoría y salida de exportación.
+- La integración hacia Finanzas mantiene `EGR_PROVEEDORES` y conserva la trazabilidad de la categoría sin duplicar hechos financieros.
+- IVA, pagos, saldos y proveedores no cambian de fuente ni de cálculo.
+- Tests PRE-BAL01 y regresión `facturacion finanzas impuestos`: **65 OK**.
+- Siguiente especificación: `PRE-BAL02`.
+
+### PRE-BAL02 — Clasificación del flujo financiero (hecho)
+
+- `CategoriaFinanciera` ahora distingue `OPERACION`, `INVERSION` y `FINANCIAMIENTO`.
+- Se agregó `afecta_resultado`, manteniendo separadas la naturaleza `INGRESO`/`EGRESO` y la clasificación del flujo.
+- Se incorporaron categorías para aportes, retiros, financiamiento recibido, pagos de financiamiento e inversiones.
+- Los movimientos automáticos y manuales heredan la clasificación desde su categoría financiera.
+- FIN permite filtrar y agrupar por grupo de flujo; el resultado operacional excluye inversión y financiamiento no operacional.
+- La variación de caja continúa considerando todos los movimientos financieros vigentes.
+- Tests PRE-BAL02 y regresión de Finanzas: **14 OK**.
+- Siguiente especificación: `PRE-BAL03`.
+
+### PRE-BAL03 — Obligaciones financieras y pagos reales (hecho)
+
+- Se reutilizaron `ObligacionFinanciera` y `PagoObligacionFinanciera` como fuente de planes de pago y compromisos no cubiertos por COM, REM, IMP o REN.
+- El saldo y la situación de la obligación se calculan desde pagos vigentes; se soportan pagos parciales y fecha de corte.
+- Los pagos ahora tienen anulación auditable y no se permiten sobrepagos.
+- Solo el pago genera `MovimientoFinanciero`; la obligación pendiente no afecta caja.
+- La sincronización del pago hacia Finanzas es idempotente y conserva fecha, monto, categoría y centro de costo.
+- Las categorías financieras determinan si el pago corresponde a operación, inversión o financiamiento.
+- Tests PRE-BAL03 y regresión de Finanzas: **19 OK**.
+- Siguiente bloque: `BAL001`.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos
