@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 from core.validators import normalizar_rut, validar_rut
 from core.models import CentroCosto
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, Proveedor
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.services.documentos import calcular_documento
 
 
@@ -297,3 +297,34 @@ class DocumentoCompraForm(forms.ModelForm):
             self.instance.iva = importes["iva"]
             self.instance.total = importes["total"]
         return cleaned
+
+
+class PagoDocumentoCompraForm(forms.ModelForm):
+    class Meta:
+        model = PagoDocumentoCompra
+        fields = ["fecha", "monto", "medio_pago", "referencia", "observaciones"]
+        widgets = {"fecha": forms.DateInput(attrs={"class": "form-control", "type": "date"}, format="%Y-%m-%d"), "monto": forms.NumberInput(attrs={"class": "form-control", "min": "0.01", "step": "0.01"}), "medio_pago": forms.TextInput(attrs={"class": "form-control"}), "referencia": forms.TextInput(attrs={"class": "form-control"}), "observaciones": forms.Textarea(attrs={"class": "form-control", "rows": 3})}
+
+    def __init__(self, *args, documento=None, **kwargs):
+        self.documento = documento or kwargs.get("instance").documento
+        super().__init__(*args, **kwargs)
+        self.fields["fecha"].input_formats = ["%Y-%m-%d"]
+
+    def clean_monto(self):
+        monto = self.cleaned_data["monto"]
+        pagado = self.documento.total_pagado
+        if self.instance.pk and not self.instance.anulado:
+            pagado -= self.instance.monto
+        if monto <= 0 or pagado + monto > self.documento.total:
+            raise ValidationError("El pago supera el saldo pendiente del documento.")
+        return monto
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.documento.estado == DocumentoCompra.Estado.ANULADO:
+            raise ValidationError("No se pueden registrar pagos para un documento anulado.")
+        return cleaned
+
+
+class AnularPagoDocumentoCompraForm(forms.Form):
+    motivo_anulacion = forms.CharField(label="Motivo de anulación", widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))

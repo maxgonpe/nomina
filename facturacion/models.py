@@ -456,7 +456,7 @@ class DocumentoCompra(AuditModel):
 
     @property
     def total_pagado(self):
-        total = self.pagos.aggregate(
+        total = self.pagos.filter(anulado=False).aggregate(
             total=Sum("monto")
         )["total"]
 
@@ -501,6 +501,17 @@ class PagoDocumentoCompra(AuditModel):
     observaciones = models.TextField(
         blank=True,
     )
+
+    anulado = models.BooleanField(default=False)
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pagos_compra_anulados",
+    )
+    motivo_anulacion = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-fecha"]

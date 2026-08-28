@@ -6,8 +6,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import CentroCosto, ParametroNegocio, ParametroValor
-from facturacion.forms import ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, ObraForm, ProveedorForm
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, Proveedor
+from facturacion.forms import ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.services.documentos import calcular_documento, recalcular_documento
 from facturacion.services.integracion import cobros_financieros, datos_impuestos, filas_excel
 from facturacion.services.reportes import resumen_facturacion
@@ -114,6 +114,18 @@ class DocumentoCompraTest(TestCase):
         form = DocumentoCompraForm(data={"fecha_documento": "2026-08-02", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "1", "neto": "2"})
         self.assertFalse(form.is_valid())
         self.assertFalse(DocumentoCompraForm(data={"fecha_documento": "2026-08-02", "proveedor": self.proveedor.pk, "tipo_documento": "FACTURA", "numero": "2", "neto": "-1"}).is_valid())
+
+    def test_pagos_derivan_estado_y_anulacion_recalcula_saldo(self):
+        compra = DocumentoCompra.objects.create(proveedor=self.proveedor, fecha_documento="2026-08-01", tipo_documento="FACTURA", numero="20", neto=100, iva=19, total=119)
+        self.client.post(reverse("facturacion:pago_compra_crear", args=[compra.pk]), {"fecha": "2026-08-20", "monto": "50", "medio_pago": "Transferencia"})
+        compra.refresh_from_db()
+        self.assertEqual(compra.estado, DocumentoCompra.Estado.PARCIAL)
+        pago = PagoDocumentoCompra.objects.get()
+        self.assertFalse(PagoDocumentoCompraForm(data={"fecha": "2026-08-21", "monto": "70"}, documento=compra).is_valid())
+        self.client.post(reverse("facturacion:pago_compra_anular", args=[pago.pk]), {"motivo_anulacion": "Error de digitación"})
+        compra.refresh_from_db()
+        self.assertEqual(compra.total_pagado, Decimal("0.00"))
+        self.assertEqual(compra.estado, DocumentoCompra.Estado.REGISTRADO)
 
 
 class ObraTest(TestCase):

@@ -33,6 +33,17 @@ Antes de implementar un módulo, leer la mini-especificación y los modelos ya e
 
 ## Invariantes
 
+### Regla funcional transversal (MOD000)
+
+- **ENTRADA:** hecho que el usuario conoce y registra, como fechas, personas, documentos, horas y pagos.
+- **DERIVADO:** valor que Django obtiene inequívocamente, como IVA, totales, saldos, cuadratura, estados de pago y reportes.
+- **SNAPSHOT:** valor calculado u obtenido por Django que debe conservarse históricamente, como tasas, sueldo, cargo y centro de costo usados en un cálculo.
+- Si un dato puede deducirse inequívocamente desde información oficial, no se solicita nuevamente.
+- Los derivados se calculan en `services/`; no se aceptan como autoridad desde formularios, templates, JavaScript o Excel.
+- Los snapshots los genera Django y no se editan manualmente ni se reescriben retroactivamente.
+- Los estados matemáticamente deducibles se derivan; las decisiones de flujo se ejecutan mediante acciones explícitas.
+- Los agregados mensuales y anuales son reportes sobre hechos almacenados, no entradas manuales.
+
 - No crear modelos por mes/año (`NominaAgosto`, `Gastos2026`). Usar período + fecha.
 - No poner aguinaldo/bono/colación como columnas fijas en `LiquidacionMensual`. Son `ConceptoRemuneracion` + `MovimientoRemuneracion`.
 - No poner CASA/EGC/CGA/OFI como columnas en rendiciones. Son filas `RendicionDetalle` → `CentroCosto`.

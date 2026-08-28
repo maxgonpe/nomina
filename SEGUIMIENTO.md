@@ -2,6 +2,17 @@
 
 Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de proveedores**.
 
+## Parches transversales
+
+### MOD000 — Regla Entrada / Derivado / Snapshot (hecho)
+
+- Regla incorporada al skill y a la regla permanente del proyecto.
+- Entrada: hechos conocidos por el usuario.
+- Derivado: consecuencias calculadas por Django en `services/`.
+- Snapshot: valores calculados que deben conservar historia.
+- Los estados calculables se obtienen desde hechos; las decisiones de flujo se ejecutan mediante acciones.
+- Siguiente parche: `MOD001` — Adecuación de Remuneraciones.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos
@@ -45,7 +56,7 @@ Orden Bloque 2: `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
 |------|--------|
 | COM001 Maestro de proveedores | Hecho |
 | COM002 Documentos de compra | Hecho |
-| COM003 Pagos a proveedores | Pendiente |
+| COM003 Pagos a proveedores | Hecho |
 | COM004 IVA de compras | Pendiente |
 | COM005 Consultas y reportes de compras | Pendiente |
 | COM006 Integración con Impuestos, Finanzas y Excel | Pendiente |
@@ -66,6 +77,14 @@ Orden Bloque 2: `REN001 → 002 → 003 → 004 → 005 → 006 → 007`
 - Adjuntos PDF/JPG/JPEG/PNG de hasta 10 MB.
 - Anulación controlada; el estado de pago queda reservado para COM003.
 - Tests: `facturacion/tests.py` — 21 casos en total.
+
+#### COM003 — Pagos a proveedores (hecho)
+
+- Registro de pagos desde la ficha del documento en `/facturacion/compras/<id>/pagos/nuevo/`.
+- Estados derivados `REGISTRADO`, `PARCIAL` y `PAGADO`; anulados no se contabilizan.
+- Control transaccional de sobrepagos y bloqueo para documentos anulados.
+- Anulación auditable con usuario, fecha y motivo; migración `facturacion.0002_pago_compra_anulacion`.
+- Tests: `facturacion/tests.py` — 22 casos en total.
 
 #### FAC001 — Maestro de clientes (hecho)
 

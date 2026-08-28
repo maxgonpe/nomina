@@ -151,7 +151,11 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 ## Estado al corte (27 ago 2026)
 
 **Cerrado:** infra + **Bloque 1** + **Bloque 2 (REN001–REN007)** + **FAC001–FAC007**.
-**Siguiente:** **COM003 — Pagos a proveedores**.
+**Siguiente:** **COM004 — IVA de compras**.
+
+### Parches transversales
+
+`MOD000` está aplicado como regla permanente del skill y de las reglas del proyecto. Antes de continuar con `COM004-R`, se debe ejecutar la secuencia `MOD001 → REM005-C01 → MOD002 → MOD003 → MOD004 → P01`.
 
 | ID | Qué | Estado |
 |----|-----|--------|
@@ -171,7 +175,8 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 | FAC007 | Integración con Impuestos, Finanzas y Excel | Hecho |
 | COM001 | Maestro de proveedores | Hecho |
 | COM002 | Documentos de compra | Hecho |
-| COM003–006 | Compras restantes | Pendiente |
+| COM003 | Pagos a proveedores | Hecho |
+| COM004–006 | Compras restantes | Pendiente |
 
 Modelos listos en `rendiciones/`: `Rendicion`, `RendicionDetalle`, `DocumentoRendicion`. Finanzas ya tiene FK a `Rendicion` (consumo futuro; no implementar en este bloque).
 

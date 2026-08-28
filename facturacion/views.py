@@ -8,11 +8,12 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 
 from core.mixins import AuditFormMixin
 from core.validators import normalizar_rut
-from facturacion.forms import AnularDocumentoTributarioForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, ProveedorForm
-from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, Proveedor
+from facturacion.forms import AnularDocumentoTributarioForm, AnularPagoDocumentoCompraForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
+from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.services.documentos import anular_documento
 from facturacion.services.cobros import registrar_cobro
 from facturacion.services.documentos_compra import anular_documento_compra
+from facturacion.services.pagos_compra import anular_pago, registrar_pago
 from facturacion.services.reportes import filtrar_documentos, resumen_facturacion
 
 
@@ -232,6 +233,43 @@ class DocumentoCompraAnularView(LoginRequiredMixin, PermissionRequiredMixin, Vie
         anular_documento_compra(compra)
         messages.success(request, "Documento de compra anulado.")
         return redirect("facturacion:compra_detalle", pk=pk)
+
+
+class PagoDocumentoCompraCreateView(LoginRequiredMixin, PermissionRequiredMixin, AuditFormMixin, CreateView):
+    permission_required = "facturacion.add_pagodocumentocompra"
+    model = PagoDocumentoCompra
+    form_class = PagoDocumentoCompraForm
+    template_name = "facturacion/compras/pago_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.documento = get_object_or_404(DocumentoCompra, pk=kwargs["documento_id"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs(); kwargs["documento"] = self.documento; return kwargs
+
+    def form_valid(self, form):
+        form.instance.documento = self.documento
+        registrar_pago(form.instance)
+        messages.success(self.request, "Pago registrado correctamente.")
+        return redirect("facturacion:compra_detalle", pk=self.documento.pk)
+
+
+class PagoDocumentoCompraAnularView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "facturacion.change_pagodocumentocompra"
+
+    def get(self, request, pk):
+        pago = get_object_or_404(PagoDocumentoCompra, pk=pk)
+        return render(request, "facturacion/compras/pago_anular.html", {"pago": pago, "form": AnularPagoDocumentoCompraForm()})
+
+    def post(self, request, pk):
+        pago = get_object_or_404(PagoDocumentoCompra, pk=pk)
+        form = AnularPagoDocumentoCompraForm(request.POST)
+        if form.is_valid():
+            anular_pago(pago, request.user, form.cleaned_data["motivo_anulacion"])
+            messages.success(request, "Pago anulado. El saldo fue actualizado.")
+            return redirect("facturacion:compra_detalle", pk=pago.documento_id)
+        return render(request, "facturacion/compras/pago_anular.html", {"pago": pago, "form": form})
 
 
 class ObraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

@@ -5,6 +5,17 @@ alwaysApply: true
 
 # Nómina
 
+## Regla funcional transversal (MOD000)
+
+1. El usuario registra hechos que conoce.
+2. Django calcula consecuencias.
+3. Todo campo se clasifica como `ENTRADA`, `DERIVADO` o `SNAPSHOT`.
+4. Los derivados no aparecen como campos editables y se calculan en `services/`.
+5. Los snapshots los genera Django y conservan la historia.
+6. Los estados calculables se derivan; las decisiones se ejecutan mediante acciones.
+7. Los reportes se construyen desde hechos almacenados.
+8. Excel no es fuente de verdad ni de cálculo.
+
 Al trabajar en este repo, seguir el skill `nomina-sistema`, leer `CONTEXTO.md` (handoff / prompt de chat nuevo) y `SEGUIMIENTO.md` para el punto exacto del desarrollo.
 
 - Django es la fuente oficial; Excel solo importa/exporta.
