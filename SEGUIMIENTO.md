@@ -89,6 +89,63 @@ Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de prov
 - Tests de Facturación: 29 OK.
 - Siguiente bloque: `IMP001`.
 
+### IMP001 — Períodos tributarios (hecho)
+
+- Se implementó `PeriodoImpuesto` como unidad mensual con fechas derivadas desde año y mes.
+- Se agregó el estado `VALIDADO` y servicios de flujo para validar, cerrar y reabrir períodos.
+- Se agregaron vistas, rutas y formularios para listar, crear y consultar períodos.
+- Los cálculos de IVA, PPM, determinación y pagos quedan reservados a `IMP002`–`IMP005`.
+- Migración aplicada: `impuestos.0002_periodo_validado`.
+- Tests de Impuestos: 5 OK.
+- Siguiente especificación: `IMP002`.
+
+### IMP002 — Determinación automática de IVA (hecho)
+
+- Se implementó `impuestos.iva` para calcular IVA ventas, IVA compras, neto ventas y diferencia preliminar por período.
+- Las fuentes oficiales son `DocumentoTributario` y `DocumentoCompra`; los pagos no modifican los montos documentales.
+- Se excluyen anulados, se respetan snapshots históricos y se aplica signo automático a notas de crédito/débito.
+- Se registran detalles de documentos utilizados y se detectan inconsistencias sin corregirlas silenciosamente.
+- El recálculo solo opera sobre períodos abiertos.
+- Tests de Impuestos: 8 OK.
+- Siguiente especificación: `IMP003`.
+
+### IMP003 — Determinación automática de PPM (hecho)
+
+- Se implementó `impuestos.ppm` con base única en `neto_ventas` determinado por IMP002.
+- La tasa se obtiene desde `TASA_PPM` mediante parámetros históricos y se guarda como snapshot en el período.
+- El monto se calcula con `Decimal` y redondeo monetario centralizado en el servicio.
+- Se detecta explícitamente la ausencia de tasa y se bloquea el recálculo de períodos cerrados.
+- Tests de Impuestos: 12 OK.
+- Siguiente especificación: `IMP004`.
+
+### IMP004 — Determinación mensual, validación y cierre (hecho)
+
+- Se implementó `impuestos.determinacion` para consolidar IVA de IMP002 y PPM de IMP003.
+- La fórmula oficial es `IVA ventas - IVA compras + PPM`, conservando diferencias negativas sin convertirlas silenciosamente a cero.
+- Se impide determinar o validar cuando faltan componentes oficiales.
+- Se reutiliza el flujo `VALIDADO` de `PeriodoImpuesto`; los pagos reales quedan reservados para IMP005.
+- Tests de Impuestos: 15 OK.
+- Siguiente especificación: `IMP005`.
+
+### IMP005 — Pagos reales de impuestos (hecho)
+
+- Se implementó `impuestos.pagos` para registrar pagos reales y parciales desde el monto determinado por IMP004.
+- El saldo y la situación de pago son derivados; los pagos posteriores al cierre están permitidos.
+- Se bloquean montos no positivos y sobrepagos normales.
+- Se agregó anulación auditable con usuario, fecha y motivo, excluyendo pagos anulados del saldo.
+- Migración aplicada: `impuestos.0003_pago_impuesto_auditoria`.
+- Tests de Impuestos: 18 OK.
+- Siguiente especificación: `IMP006`.
+
+### IMP006 — Reportes e integración tributaria (hecho)
+
+- Se implementó `impuestos.reportes` para resúmenes mensuales, anuales, saldos y pagos por período o fecha real.
+- Se distinguen obligaciones tributarias por período de egresos financieros por fecha de pago.
+- Se preparó salida estructurada para Excel sin crear totales paralelos ni recalcular en la interfaz.
+- No se inventan períodos inexistentes y los pagos anulados quedan excluidos.
+- Tests de Impuestos: 21 OK.
+- Módulo IMP cerrado: `IMP001` a `IMP006`.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos

@@ -173,6 +173,18 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 `COM006-R` está aplicado: `facturacion.services.integracion_compras` formaliza las salidas separadas hacia Impuestos (`DocumentoCompra`), Finanzas (`PagoDocumentoCompra`) y Excel, con identidad de origen para idempotencia y exclusión de anulados. El bloque COM queda cerrado y la suite `facturacion` pasa con 29 tests. El siguiente bloque es `IMP001`.
 
+`IMP001` está aplicado: `PeriodoImpuesto` representa el mes tributario, calcula fechas derivadas y dispone de flujo controlado de validación, cierre y reapertura. La migración `impuestos.0002_periodo_validado` está aplicada y sus vistas básicas están disponibles bajo `/impuestos/periodos/`. El siguiente paso es `IMP002`.
+
+`IMP002` está aplicado: `impuestos.iva` calcula los componentes documentales de IVA desde ventas y compras, con signos de notas, exclusión de anulados, detalles utilizados e inconsistencias. La suite de Impuestos pasa con 8 tests. El siguiente paso es `IMP003`.
+
+`IMP003` está aplicado: `impuestos.ppm` calcula el PPM sobre el neto de ventas de IMP002, consulta `TASA_PPM` histórica y conserva el snapshot de tasa en `PeriodoImpuesto`. La suite de Impuestos pasa con 12 tests. El siguiente paso es `IMP004`.
+
+`IMP004` está aplicado: `impuestos.determinacion` consolida IVA y PPM, exige los componentes previos, conserva resultados negativos y permite validar el período. La suite de Impuestos pasa con 15 tests. El siguiente paso es `IMP005`.
+
+`IMP005` está aplicado: `impuestos.pagos` registra pagos reales parciales contra el monto de IMP004, calcula saldo/situación y soporta anulación auditable. La migración `impuestos.0003_pago_impuesto_auditoria` está aplicada y la suite de Impuestos pasa con 18 tests. El siguiente paso es `IMP006`.
+
+`IMP006` está aplicado: `impuestos.reportes` entrega resúmenes por período y año, saldos tributarios, pagos por período/fecha y filas de exportación. El módulo IMP queda cerrado con 21 tests y el siguiente bloque puede ser Finanzas o la integración definida por el proyecto.
+
 | ID | Qué | Estado |
 |----|-----|--------|
 | REM001–010 | Remuneraciones completas | Hecho |

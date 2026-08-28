@@ -19,6 +19,7 @@ class PeriodoImpuesto(AuditModel):
     class Estado(models.TextChoices):
         BORRADOR = "BORRADOR", "Borrador"
         CALCULADO = "CALCULADO", "Calculado"
+        VALIDADO = "VALIDADO", "Validado"
         DECLARADO = "DECLARADO", "Declarado"
         PAGADO = "PAGADO", "Pagado"
         CERRADO = "CERRADO", "Cerrado"
@@ -144,7 +145,7 @@ class PeriodoImpuesto(AuditModel):
 
     @property
     def total_pagado(self):
-        total = self.pagos.aggregate(
+        total = self.pagos.filter(anulado=False).aggregate(
             total=Sum("monto")
         )["total"]
 
@@ -270,6 +271,8 @@ class PagoImpuesto(AuditModel):
 
     fecha = models.DateField()
 
+    medio_pago = models.CharField(max_length=50, blank=True)
+
     monto = models.DecimalField(
         max_digits=16,
         decimal_places=2,
@@ -289,6 +292,11 @@ class PagoImpuesto(AuditModel):
     observaciones = models.TextField(
         blank=True,
     )
+
+    anulado = models.BooleanField(default=False)
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="pagos_impuestos_anulados")
+    motivo_anulacion = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-fecha"]
