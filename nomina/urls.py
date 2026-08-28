@@ -13,6 +13,7 @@ admin.site.index_title = "Administración"
 
 urlpatterns = [
     path("impuestos/", include("impuestos.urls")),
+    path("finanzas/", include("finanzas.urls")),
     path("admin/", admin.site.urls),
     path("cuentas/", include("django.contrib.auth.urls")),
     path("rrhh/", include("rrhh.urls")),

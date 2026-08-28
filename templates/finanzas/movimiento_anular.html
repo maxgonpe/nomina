@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block title %}Anular movimiento{% endblock %}{% block content %}<h1 class="h3">Anular movimiento manual</h1><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-danger">Anular</button></form>{% endblock %}

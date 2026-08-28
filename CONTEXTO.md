@@ -185,6 +185,22 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 `IMP006` está aplicado: `impuestos.reportes` entrega resúmenes por período y año, saldos tributarios, pagos por período/fecha y filas de exportación. El módulo IMP queda cerrado con 21 tests y el siguiente bloque puede ser Finanzas o la integración definida por el proyecto.
 
+`FIN001` está aplicado: `CategoriaFinanciera` incluye `permite_manual`, el catálogo base está cargado por migración y las categorías automáticas quedan separadas de los movimientos manuales. Finanzas pasa 2 tests. El siguiente paso es `FIN002`.
+
+`FIN002` está aplicado: `PagoRemuneracion` se integra como egreso financiero mediante `finanzas.integracion_remuneraciones`, con identidad idempotente y herencia de datos del origen. Finanzas pasa 3 tests. El siguiente paso es `FIN003`.
+
+`FIN003` está aplicado: `CobroDocumentoTributario` se integra como ingreso financiero mediante `finanzas.integracion_facturacion`, usando fecha real de cobro, centro de costo heredado e identidad idempotente. Finanzas pasa 5 tests. El siguiente paso es `FIN004`.
+
+`FIN004` está aplicado: `PagoDocumentoCompra` y `PagoImpuesto` se integran como egresos financieros idempotentes, excluyendo anulados y heredando los datos del origen. La categoría de rendiciones queda reservada porque REN no tiene aún un pago independiente. Finanzas pasa 6 tests. El siguiente paso es `FIN005`.
+
+`FIN005` está aplicado: los movimientos manuales se registran únicamente con categorías activas autorizadas, se identifican como MANUAL y pueden anularse con auditoría. La migración `finanzas.0006_fin005_anulacion_manual` está aplicada y Finanzas pasa 9 tests. El siguiente paso es `FIN006`.
+
+`FIN006` está aplicado: `finanzas.flujo` calcula flujo mensual, resultado, saldo inicial/final y agrupaciones por categoría/centro desde movimientos vigentes. Finanzas pasa 11 tests. El siguiente paso es `FIN007`.
+
+`FIN007` está aplicado: `finanzas.anuales` reconstruye reportes anuales, matriz categoría/mes, acumulados, orígenes y salidas para BAL/Excel. El bloque FIN queda cerrado; la suite de Finanzas pasa 12 tests.
+
+La interfaz general de Finanzas también está disponible: `/finanzas/movimientos/` lista movimientos con filtros y enlaza a la creación manual. El enlace `Finanzas` fue agregado al menú global.
+
 | ID | Qué | Estado |
 |----|-----|--------|
 | REM001–010 | Remuneraciones completas | Hecho |

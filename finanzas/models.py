@@ -53,6 +53,8 @@ class CategoriaFinanciera(AuditModel):
         default=True,
     )
 
+    permite_manual = models.BooleanField(default=False)
+
     descripcion = models.TextField(
         blank=True,
     )
@@ -146,6 +148,25 @@ class MovimientoFinanciero(AuditModel):
         related_name="movimientos_financieros",
     )
 
+    pago_remuneracion = models.ForeignKey(
+        "remuneraciones.PagoRemuneracion",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="movimientos_financieros",
+    )
+
+    cobro_documento = models.ForeignKey(
+        "facturacion.CobroDocumentoTributario",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="movimientos_financieros",
+    )
+
+    pago_compra = models.ForeignKey("facturacion.PagoDocumentoCompra", on_delete=models.PROTECT, null=True, blank=True, related_name="movimientos_financieros")
+    pago_impuesto = models.ForeignKey("impuestos.PagoImpuesto", on_delete=models.PROTECT, null=True, blank=True, related_name="movimientos_financieros")
+
     rendicion = models.ForeignKey(
         "rendiciones.Rendicion",
         on_delete=models.PROTECT,
@@ -193,6 +214,11 @@ class MovimientoFinanciero(AuditModel):
         blank=True,
     )
 
+    anulado = models.BooleanField(default=False)
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="movimientos_financieros_anulados")
+    motivo_anulacion = models.TextField(blank=True)
+
     class Meta:
         ordering = ["-fecha"]
 
@@ -208,6 +234,10 @@ class MovimientoFinanciero(AuditModel):
                 condition=Q(monto__gt=0),
                 name="ck_mov_fin_monto",
             ),
+            models.UniqueConstraint(fields=["origen", "pago_remuneracion"], name="uq_mov_fin_pago_remuneracion"),
+            models.UniqueConstraint(fields=["origen", "cobro_documento"], name="uq_mov_fin_cobro_documento"),
+            models.UniqueConstraint(fields=["origen", "pago_compra"], name="uq_mov_fin_pago_compra"),
+            models.UniqueConstraint(fields=["origen", "pago_impuesto"], name="uq_mov_fin_pago_impuesto"),
         ]
 
     def __str__(self):

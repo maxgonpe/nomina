@@ -11,14 +11,14 @@ from finanzas.models import (
 
 @admin.register(CategoriaFinanciera)
 class CategoriaFinancieraAdmin(admin.ModelAdmin):
-    list_display = ("codigo", "nombre", "tipo", "activo")
+    list_display = ("codigo", "nombre", "tipo", "activo", "permite_manual")
     list_filter = ("tipo", "activo")
     search_fields = ("codigo", "nombre")
 
 
 @admin.register(MovimientoFinanciero)
 class MovimientoFinancieroAdmin(admin.ModelAdmin):
-    list_display = ("fecha", "tipo", "categoria", "monto", "origen")
+    list_display = ("fecha", "tipo", "categoria", "monto", "origen", "anulado")
     list_filter = ("tipo", "origen")
 
 

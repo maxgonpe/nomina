@@ -146,6 +146,77 @@ Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de prov
 - Tests de Impuestos: 21 OK.
 - Módulo IMP cerrado: `IMP001` a `IMP006`.
 
+### FIN001 — Catálogo de categorías financieras (hecho)
+
+- `CategoriaFinanciera` distingue categorías automáticas de categorías habilitadas para movimientos manuales.
+- Catálogo base cargado: clientes, remuneraciones, proveedores, rendiciones, impuestos, bancos y otros ingresos/egresos.
+- Migración aplicada: `finanzas.0002_catalogo_categorias`.
+- Tests de Finanzas: 2 OK.
+- Siguiente especificación: `FIN002`.
+
+### FIN002 — Pagos de remuneraciones (hecho)
+
+- Se agregó la integración idempotente de `PagoRemuneracion` hacia `MovimientoFinanciero`.
+- Solo pagos vigentes generan egresos; fecha, monto, trabajador, liquidación y centro de costo se heredan del origen.
+- La categoría automática es `EGR_REMUNERACIONES` y no se permite duplicar el pago manualmente.
+- Migración aplicada: `finanzas.0003_fin002_pago_remuneracion`.
+- Tests de Finanzas: 3 OK.
+- Siguiente especificación: `FIN003`.
+
+### FIN003 — Cobros de facturación (hecho)
+
+- Se agregó la integración idempotente de `CobroDocumentoTributario` como ingreso financiero.
+- La fecha financiera es la fecha real del cobro, no la fecha de emisión del documento.
+- Se heredan cliente/documento, obra y centro de costo; la categoría automática es `ING_CLIENTES`.
+- Cobros anulados y cobros de documentos anulados quedan excluidos.
+- Migración aplicada: `finanzas.0004_fin003_cobro_documento`.
+- Tests de Finanzas: 5 OK.
+- Siguiente especificación: `FIN004`.
+
+### FIN004 — Compras, rendiciones e impuestos (hecho)
+
+- Se agregaron integraciones idempotentes para `PagoDocumentoCompra` y `PagoImpuesto` como egresos financieros.
+- Se heredan fecha real, monto, proveedor/documento, centro de costo y período tributario cuando corresponde.
+- Pagos y documentos anulados quedan excluidos de los egresos normales.
+- Se reservaron las categorías `EGR_RENDICIONES`; REN aún no expone un hecho de pago independiente para integrar.
+- Migración aplicada: `finanzas.0005_fin004_pagos`.
+- Tests de Finanzas: 6 OK.
+- Siguiente especificación: `FIN005`.
+
+### FIN005 — Movimientos manuales controlados (hecho)
+
+- Se implementó el registro manual sobre `MovimientoFinanciero`, sin tabla paralela.
+- El formulario solo ofrece categorías activas con `permite_manual=True`.
+- El servidor valida origen MANUAL, naturaleza coherente y monto positivo.
+- Se agregó anulación auditable con usuario, fecha y motivo.
+- Migración aplicada: `finanzas.0006_fin005_anulacion_manual`.
+- Tests de Finanzas: 9 OK.
+- Siguiente especificación: `FIN006`.
+
+### FIN006 — Flujo financiero mensual (hecho)
+
+- Se implementó `finanzas.flujo` para calcular ingresos, egresos, resultado, saldo inicial y saldo final.
+- Los movimientos anulados quedan excluidos de todos los cálculos.
+- Se agregaron agrupaciones por categoría y centro de costo.
+- `CierreFinancieroMensual` puede recalcularse desde los movimientos oficiales sin almacenar datos manuales paralelos.
+- Tests de Finanzas: 11 OK.
+- Siguiente especificación: `FIN007`.
+
+### FIN007 — Reporte anual e integración (hecho)
+
+- Se implementó `finanzas.anuales` para reportes anuales, matriz categoría × mes, orígenes y evolución de saldos.
+- Los meses sin movimientos se distinguen mediante `tiene_datos`; no se crean columnas mensuales en los modelos.
+- Se prepararon salidas estructuradas para BAL y Excel desde `MovimientoFinanciero` vigente.
+- La antigua planilla Pagos Generales queda reconstruible por categoría y mes, sin ser fuente de datos.
+- Tests de Finanzas: 12 OK.
+- Bloque FIN cerrado: `FIN001` a `FIN007`.
+
+### Interfaz de Finanzas — listado (hecho)
+
+- Se agregó `/finanzas/movimientos/` con filtros GET por fecha, tipo, origen, categoría y estado.
+- El menú principal ahora incluye el enlace `Finanzas`.
+- El listado distingue movimientos vigentes y anulados, y conserva la entrada separada para movimientos manuales.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos

@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block title %}Movimiento manual{% endblock %}{% block content %}<h1 class="h3">Movimiento financiero manual</h1><p class="text-muted">Solo registre hechos que no provengan de otro módulo.</p><form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Registrar</button></form>{% endblock %}
