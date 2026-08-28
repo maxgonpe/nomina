@@ -38,5 +38,6 @@ urlpatterns = [
     path("obras/<int:obra_id>/documentos/", views.DocumentoTributarioListView.as_view(), name="obra_documentos"),
     path("documentos/<int:documento_id>/cobros/nuevo/", views.CobroDocumentoCreateView.as_view(), name="cobro_crear"),
     path("cobros/<int:pk>/editar/", views.CobroDocumentoUpdateView.as_view(), name="cobro_editar"),
+    path("cobros/<int:pk>/anular/", views.CobroDocumentoAnularView.as_view(), name="cobro_anular"),
     path("resumen/", views.ResumenFacturacionView.as_view(), name="resumen"),
 ]

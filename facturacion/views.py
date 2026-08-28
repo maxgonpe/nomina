@@ -8,10 +8,10 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 
 from core.mixins import AuditFormMixin
 from core.validators import normalizar_rut
-from facturacion.forms import AnularDocumentoTributarioForm, AnularPagoDocumentoCompraForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
+from facturacion.forms import AnularCobroDocumentoForm, AnularDocumentoCompraForm, AnularDocumentoTributarioForm, AnularPagoDocumentoCompraForm, ClienteForm, CobroDocumentoForm, DocumentoCompraForm, DocumentoTributarioForm, FiltroFacturacionForm, ObraForm, PagoDocumentoCompraForm, ProveedorForm
 from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
 from facturacion.services.documentos import anular_documento
-from facturacion.services.cobros import registrar_cobro
+from facturacion.services.cobros import anular_cobro, registrar_cobro
 from facturacion.services.documentos_compra import anular_documento_compra
 from facturacion.services.pagos_compra import anular_pago, registrar_pago
 from facturacion.services.reportes import filtrar_documentos, resumen_facturacion
@@ -228,9 +228,16 @@ class DocumentoCompraUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Aud
 class DocumentoCompraAnularView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = "facturacion.change_documentocompra"
 
+    def get(self, request, pk):
+        compra = get_object_or_404(DocumentoCompra, pk=pk)
+        return render(request, "facturacion/compras/anular.html", {"compra": compra, "form": AnularDocumentoCompraForm()})
+
     def post(self, request, pk):
         compra = get_object_or_404(DocumentoCompra, pk=pk)
-        anular_documento_compra(compra)
+        form = AnularDocumentoCompraForm(request.POST)
+        if not form.is_valid():
+            return render(request, "facturacion/compras/anular.html", {"compra": compra, "form": form})
+        anular_documento_compra(compra, usuario=request.user, motivo_anulacion=form.cleaned_data["motivo_anulacion"])
         messages.success(request, "Documento de compra anulado.")
         return redirect("facturacion:compra_detalle", pk=pk)
 
@@ -445,9 +452,7 @@ class DocumentoTributarioAnularView(LoginRequiredMixin, PermissionRequiredMixin,
         documento = get_object_or_404(DocumentoTributario, pk=pk)
         form = AnularDocumentoTributarioForm(request.POST)
         if form.is_valid():
-            documento.actualizado_por = request.user
-            anular_documento(documento)
-            documento.save(update_fields=["actualizado_por", "actualizado_en"])
+            anular_documento(documento, motivo=form.cleaned_data["motivo"], usuario=request.user)
             messages.success(request, "Documento tributario anulado.")
             return redirect("facturacion:documento_detalle", pk=documento.pk)
         return render(request, "facturacion/documentos/anular.html", {"documento": documento, "form": form})
@@ -490,3 +495,20 @@ class CobroDocumentoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Audi
         registrar_cobro(form.instance)
         messages.success(self.request, "Cobro actualizado.")
         return redirect("facturacion:documento_detalle", pk=form.instance.documento_id)
+
+
+class CobroDocumentoAnularView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "facturacion.change_cobrodocumentotributario"
+
+    def get(self, request, pk):
+        cobro = get_object_or_404(CobroDocumentoTributario, pk=pk)
+        return render(request, "facturacion/documentos/cobro_anular.html", {"cobro": cobro, "form": AnularCobroDocumentoForm()})
+
+    def post(self, request, pk):
+        cobro = get_object_or_404(CobroDocumentoTributario, pk=pk)
+        form = AnularCobroDocumentoForm(request.POST)
+        if form.is_valid():
+            anular_cobro(cobro, motivo=form.cleaned_data["motivo"], usuario=request.user)
+            messages.success(request, "Cobro anulado. El saldo fue recalculado.")
+            return redirect("facturacion:documento_detalle", pk=cobro.documento_id)
+        return render(request, "facturacion/documentos/cobro_anular.html", {"cobro": cobro, "form": form})

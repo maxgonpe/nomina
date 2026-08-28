@@ -29,6 +29,10 @@ def conceptos_carga_manual():
     return ConceptoRemuneracion.objects.filter(
         activo=True,
         editable=True,
+        naturaleza_calculo__in=[
+            ConceptoRemuneracion.NaturalezaCalculo.MANUAL,
+            ConceptoRemuneracion.NaturalezaCalculo.MIXTO,
+        ],
         tipo__in=[
             ConceptoRemuneracion.Tipo.HABER,
             ConceptoRemuneracion.Tipo.DESCUENTO,

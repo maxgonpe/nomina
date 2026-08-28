@@ -13,6 +13,52 @@ Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de prov
 - Los estados calculables se obtienen desde hechos; las decisiones de flujo se ejecutan mediante acciones.
 - Siguiente parche: `MOD001` — Adecuación de Remuneraciones.
 
+### MOD001 — Adecuación de Remuneraciones (hecho)
+
+- Formularios revisados: entradas explícitas y exclusión de snapshots/totales derivados.
+- Períodos, finiquitos y liquidaciones mantienen estados controlados por acciones y servicios.
+- Movimientos manuales ya no ofrecen conceptos de naturaleza únicamente automática; movimientos calculados no se editan manualmente.
+- Tests REM: 136 OK.
+- Tests MOD001: formulario y conceptos automáticos protegidos.
+- REM005-C01 ya estaba implementado en el código; se verificó contra la especificación y su migración `remuneraciones.0008_pago_remuneracion_anulacion` está aplicada.
+- La suite cubre sobrepagos, pagos parciales/totales, anulación auditable y reversión de estado.
+- Siguiente parche: `MOD002` — Adecuación de Rendiciones.
+
+### MOD002 — Adecuación de Rendiciones (hecho)
+
+- Formularios ordinarios mantienen únicamente trabajador, fecha, descripción, total declarado y observaciones; detalles y respaldos siguen siendo entradas reales.
+- Totales, diferencia y cuadratura permanecen calculados desde la distribución en `services/`.
+- Estados se mantienen como acciones controladas; la reapertura ahora solicita motivo en la UI y deja trazabilidad en observaciones.
+- Tests de Rendiciones: 69 OK.
+- Siguiente parche: `MOD003` — Adecuación de Facturación.
+
+### MOD003 — Adecuación de Facturación (hecho)
+
+- Formularios de documentos y cobros no exponen IVA, total, tasa, estado ni saldos calculados como entradas manuales.
+- Los estados y saldos se recalculan mediante servicios; documentos anulados no admiten nuevos cobros.
+- Los cobros de ventas ahora tienen anulación explícita con usuario, fecha y motivo, y el saldo excluye cobros anulados.
+- La anulación de documentos desde la UI exige motivo y conserva trazabilidad en observaciones.
+- Migración aplicada: `facturacion.0003_cobro_venta_anulacion`.
+- Tests de Facturación: 22 OK.
+- Siguiente parche: `MOD004` — Adecuación de Compras.
+
+### MOD004 — Adecuación de Compras (hecho)
+
+- Documento de compra recibe solo datos de entrada; IVA, total, tasa snapshot, saldo y estado se calculan o controlan por servicios.
+- Pagos anulados quedan excluidos del total pagado y de la transición de estado.
+- La anulación de documentos de compra exige motivo, registra usuario y bloquea documentos con pagos activos.
+- Se agregó formulario y pantalla de anulación para documentos de compra.
+- Tests de Facturación: 22 OK.
+- Siguiente parche: `P01` — revisión transversal final.
+
+### P01 — Revisión transversal final (hecho)
+
+- Se verificó la separación Entrada/Derivado/Snapshot en RRHH, Rendiciones y Facturación.
+- Estados de contrato y obra ya no son editables desde formularios; permanecen bajo acciones de flujo.
+- Se revisaron anulaciones, motivos, auditoría, exclusión de anulados y bloqueos de nuevas operaciones.
+- Regresión transversal: `rrhh facturacion rendiciones`, 113 tests OK.
+- Ciclo de parches concluido.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos

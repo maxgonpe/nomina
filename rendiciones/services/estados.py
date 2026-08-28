@@ -88,13 +88,19 @@ def rechazar(rendicion, *, motivo, usuario=None):
 
 
 @transaction.atomic
-def reabrir(rendicion, usuario=None):
+def reabrir(rendicion, *, motivo=None, usuario=None):
     """RECHAZADA → BORRADOR (acción explícita para volver a editar)."""
     if rendicion.estado != Rendicion.Estado.RECHAZADA:
         raise ValidationError(
             "Solo una rendición rechazada puede reabrirse a borrador."
         )
-    return _set_estado(rendicion, Rendicion.Estado.BORRADOR, usuario)
+    motivo = (motivo or "").strip()
+    return _set_estado(
+        rendicion,
+        Rendicion.Estado.BORRADOR,
+        usuario,
+        extra_fields={"observaciones": f"{rendicion.observaciones}\nReapertura: {motivo}".strip()},
+    )
 
 
 @transaction.atomic

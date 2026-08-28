@@ -22,6 +22,7 @@ from rendiciones.forms import (
     DocumentoRendicionForm,
     FiltroRendicionForm,
     RechazarRendicionForm,
+    ReabrirRendicionForm,
     RendicionDetalleFormSet,
     RendicionForm,
 )
@@ -512,13 +513,17 @@ class RendicionReabrirView(
             {
                 "rendicion": rendicion,
                 "puede_reabrir": acciones_disponibles(rendicion)["reabrir"],
+                "form": ReabrirRendicionForm(),
             },
         )
 
     def post(self, request, pk):
         rendicion = get_object_or_404(Rendicion, pk=pk)
+        form = ReabrirRendicionForm(request.POST)
+        if not form.is_valid():
+            return render(request, "rendiciones/rendicion_reabrir.html", {"rendicion": rendicion, "puede_reabrir": True, "form": form})
         try:
-            reabrir(rendicion, usuario=request.user)
+            reabrir(rendicion, motivo=form.cleaned_data["motivo"], usuario=request.user)
         except ValidationError as exc:
             messages.error(request, "; ".join(exc.messages))
             return redirect("rendiciones:rendicion_detalle", pk=pk)

@@ -108,6 +108,7 @@ class ContratoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["fecha_inicio"].input_formats = ["%Y-%m-%d"]
         self.fields["fecha_termino"].input_formats = ["%Y-%m-%d"]
+        self.fields["estado"].disabled = True
         cargos = Cargo.objects.filter(activo=True)
         centros = CentroCosto.objects.filter(activo=True)
         if self.instance.pk:

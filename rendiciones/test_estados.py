@@ -141,7 +141,8 @@ class FlujoEstadoVistaTests(TestCase):
         self.rendicion.refresh_from_db()
         self.assertEqual(self.rendicion.estado, Rendicion.Estado.RECHAZADA)
         self.client.post(
-            reverse("rendiciones:rendicion_reabrir", args=[self.rendicion.pk])
+            reverse("rendiciones:rendicion_reabrir", args=[self.rendicion.pk]),
+            {"motivo": "Corregir antecedentes"},
         )
         self.rendicion.refresh_from_db()
         self.assertEqual(self.rendicion.estado, Rendicion.Estado.BORRADOR)

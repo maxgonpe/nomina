@@ -16,9 +16,16 @@ def calcular_documento_compra(fecha, tipo, neto):
     return {"tasa_iva_snapshot": tasa, "iva": iva, "total": neto + iva}
 
 
-def anular_documento_compra(documento):
+def anular_documento_compra(documento, *, usuario=None, motivo_anulacion=""):
     if documento.estado == DocumentoCompra.Estado.ANULADO:
         raise ValidationError("El documento ya está anulado.")
+    if documento.total_pagado > 0:
+        raise ValidationError("No se puede anular un documento con pagos registrados.")
+    motivo_anulacion = (motivo_anulacion or "").strip()
+    if not motivo_anulacion:
+        raise ValidationError("El motivo de anulación es obligatorio.")
     documento.estado = DocumentoCompra.Estado.ANULADO
-    documento.save(update_fields=["estado", "actualizado_en"])
+    documento.observaciones = f"{documento.observaciones}\nAnulación: {motivo_anulacion}".strip()
+    documento.actualizado_por = usuario
+    documento.save(update_fields=["estado", "observaciones", "actualizado_por", "actualizado_en"])
     return documento

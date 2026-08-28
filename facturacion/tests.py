@@ -105,7 +105,7 @@ class DocumentoCompraTest(TestCase):
         self.assertRedirects(response, reverse("facturacion:compra_detalle", args=[compra.pk]))
         self.assertEqual(compra.iva, Decimal("190000.00"))
         self.assertEqual(compra.total, Decimal("1190000.00"))
-        self.client.post(reverse("facturacion:compra_anular", args=[compra.pk]))
+        self.client.post(reverse("facturacion:compra_anular", args=[compra.pk]), {"motivo_anulacion": "Compra registrada por error"})
         compra.refresh_from_db()
         self.assertEqual(compra.estado, DocumentoCompra.Estado.ANULADO)
 
@@ -210,7 +210,7 @@ class DocumentoTributarioTest(TestCase):
         self.assertRedirects(response, reverse("facturacion:documento_detalle", args=[documento.pk]))
         documento.refresh_from_db()
         self.assertEqual(documento.iva, Decimal("0.00"))
-        self.client.post(reverse("facturacion:documento_anular", args=[documento.pk]), {"confirmacion": "on"})
+        self.client.post(reverse("facturacion:documento_anular", args=[documento.pk]), {"motivo": "Documento emitido por error"})
         documento.refresh_from_db()
         self.assertEqual(documento.estado, DocumentoTributario.Estado.ANULADA)
 

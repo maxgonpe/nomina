@@ -4,6 +4,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import models
 from django.db.models import Q, Sum
 
@@ -249,7 +250,7 @@ class DocumentoTributario(AuditModel):
 
     @property
     def total_cobrado(self):
-        total = self.cobros.aggregate(
+        total = self.cobros.filter(anulado=False).aggregate(
             total=Sum("monto")
         )["total"]
 
@@ -294,6 +295,17 @@ class CobroDocumentoTributario(AuditModel):
     observaciones = models.TextField(
         blank=True,
     )
+
+    anulado = models.BooleanField(default=False)
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cobros_documento_anulados",
+    )
+    motivo_anulacion = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-fecha"]

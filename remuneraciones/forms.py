@@ -387,6 +387,8 @@ class MovimientoForm(forms.ModelForm):
             raise ValidationError(
                 "Este movimiento está bloqueado y no se puede editar."
             )
+        if self.instance.pk and self.instance.origen == MovimientoRemuneracion.Origen.CALCULADO:
+            raise ValidationError("Los movimientos calculados no se pueden editar manualmente.")
         cleaned["trabajador"] = trabajador
         cleaned["periodo"] = periodo
         return cleaned

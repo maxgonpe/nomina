@@ -48,9 +48,12 @@ def recalcular_documento(documento):
 
 
 @transaction.atomic
-def anular_documento(documento):
+def anular_documento(documento, *, motivo="", usuario=None):
     if documento.estado == DocumentoTributario.Estado.ANULADA:
         raise ValidationError("El documento ya está anulado.")
     documento.estado = DocumentoTributario.Estado.ANULADA
-    documento.save(update_fields=["estado", "actualizado_en"])
+    if (motivo or "").strip():
+        documento.observaciones = f"{documento.observaciones}\nAnulación: {motivo.strip()}".strip()
+    documento.actualizado_por = usuario
+    documento.save(update_fields=["estado", "observaciones", "actualizado_por", "actualizado_en"])
     return documento

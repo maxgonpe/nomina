@@ -100,6 +100,7 @@ class ObraForm(forms.ModelForm):
         cliente = kwargs.pop("cliente", None)
         super().__init__(*args, **kwargs)
         self.fields["cliente"].queryset = Cliente.objects.filter(activo=True).order_by("razon_social")
+        self.fields["estado"].disabled = True
         if self.instance.pk and not self.instance.cliente.activo:
             self.fields["cliente"].queryset = Cliente.objects.filter(pk=self.instance.cliente_id) | self.fields["cliente"].queryset
         self.fields["centro_costo"].queryset = CentroCosto.objects.filter(activo=True).order_by("codigo")
@@ -198,7 +199,23 @@ class DocumentoTributarioForm(forms.ModelForm):
 
 
 class AnularDocumentoTributarioForm(forms.Form):
-    confirmacion = forms.BooleanField(label="Confirmo la anulación", required=True)
+    motivo = forms.CharField(label="Motivo de anulación", min_length=3, widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))
+
+    def clean_motivo(self):
+        motivo = (self.cleaned_data.get("motivo") or "").strip()
+        if not motivo:
+            raise ValidationError("El motivo de anulación es obligatorio.")
+        return motivo
+
+
+class AnularCobroDocumentoForm(forms.Form):
+    motivo = forms.CharField(label="Motivo de anulación", min_length=3, widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))
+
+    def clean_motivo(self):
+        motivo = (self.cleaned_data.get("motivo") or "").strip()
+        if not motivo:
+            raise ValidationError("El motivo de anulación es obligatorio.")
+        return motivo
 
 
 class CobroDocumentoForm(forms.ModelForm):
@@ -328,3 +345,7 @@ class PagoDocumentoCompraForm(forms.ModelForm):
 
 class AnularPagoDocumentoCompraForm(forms.Form):
     motivo_anulacion = forms.CharField(label="Motivo de anulación", widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))
+
+
+class AnularDocumentoCompraForm(forms.Form):
+    motivo_anulacion = forms.CharField(label="Motivo de anulación", min_length=3, widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))

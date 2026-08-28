@@ -238,6 +238,20 @@ class AnularRendicionForm(forms.Form):
         return motivo
 
 
+class ReabrirRendicionForm(forms.Form):
+    motivo = forms.CharField(
+        label="Motivo de reapertura",
+        min_length=3,
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+
+    def clean_motivo(self):
+        motivo = (self.cleaned_data.get("motivo") or "").strip()
+        if not motivo:
+            raise ValidationError("El motivo de reapertura es obligatorio.")
+        return motivo
+
+
 class FiltroRendicionForm(forms.Form):
     anio = forms.IntegerField(
         required=False,

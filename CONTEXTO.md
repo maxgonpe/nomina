@@ -157,6 +157,16 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 `MOD000` está aplicado como regla permanente del skill y de las reglas del proyecto. Antes de continuar con `COM004-R`, se debe ejecutar la secuencia `MOD001 → REM005-C01 → MOD002 → MOD003 → MOD004 → P01`.
 
+`MOD001` también está aplicado: Remuneraciones fue revisado bajo la regla de hechos, derivados y snapshots. `REM005-C01` ya estaba implementado, con migración `remuneraciones.0008_pago_remuneracion_anulacion`; la suite `rrhh core remuneraciones` pasa con 138 tests. El siguiente parche es `MOD002`.
+
+`MOD002` está aplicado: Rendiciones conserva entradas reales, calcula totales/cuadratura en servicios y usa acciones para los estados. La reapertura exige motivo desde la UI. La suite `rendiciones` pasa con 69 tests. El siguiente parche es `MOD003`.
+
+`MOD003` está aplicado: Facturación mantiene separados hechos y derivados, bloquea cobros sobre documentos anulados y añade trazabilidad para anulación de cobros de ventas. La migración `facturacion.0003_cobro_venta_anulacion` está aplicada y la suite `facturacion` pasa con 22 tests. El siguiente parche es `MOD004`.
+
+`MOD004` está aplicado: Compras mantiene cálculos y estados fuera de la entrada manual, excluye pagos anulados de saldos y exige motivo para anular documentos, bloqueando la anulación cuando existen pagos activos. La suite `facturacion` pasa con 22 tests. El siguiente parche es `P01`.
+
+`P01` está concluido: se hizo revisión transversal de entradas, derivados, snapshots, estados y anulaciones en los módulos principales. Los formularios de Contratos y Obras ya no permiten editar directamente sus estados. La regresión `rrhh facturacion rendiciones` pasa con 113 tests; no quedan parches funcionales pendientes.
+
 | ID | Qué | Estado |
 |----|-----|--------|
 | REM001–010 | Remuneraciones completas | Hecho |
