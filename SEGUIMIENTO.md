@@ -251,6 +251,47 @@ Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de prov
 - Tests PRE-BAL03 y regresión de Finanzas: **19 OK**.
 - Siguiente bloque: `BAL001`.
 
+### BAL001 — Catálogo de líneas y equivalencias Excel (hecho)
+
+- Se creó `LineaBalance` como definición de reporte, sin implementar cuentas contables ni Debe/Haber.
+- Se cargó el catálogo inicial de líneas de liquidez, cobranza, obligaciones, tributación, resultado, financiamiento y equivalencia Excel.
+- Cada línea declara su fuente, código fuente, orden, estado y si permite ajuste excepcional.
+- Se agregó consulta protegida en `/balance/lineas/` y administración mediante Django Admin.
+- La configuración no registra hechos financieros ni duplica datos de FAC, COM, REM, IMP, REN o FIN.
+- Tests BAL001: **2 OK**.
+- Siguiente especificación: `BAL002`.
+
+### BAL002 — Motor de balance a fecha de corte (hecho)
+
+- Se agregó `balance.services.balance_a_fecha()` como punto de entrada del motor.
+- Caja se calcula exclusivamente desde movimientos financieros vigentes hasta la fecha de corte.
+- Cuentas por cobrar se calcula desde documentos tributarios y cobros reales hasta la fecha de corte.
+- Obligaciones financieras se calculan desde saldos de obligaciones y pagos vigentes a la fecha indicada.
+- El resultado de gestión considera solo categorías que afectan resultado; aportes, inversiones y financiamiento quedan fuera.
+- Se calcula posición disponible: caja + cuentas por cobrar - obligaciones financieras.
+- Se agregaron pruebas de separación caja/resultado y exclusión de movimientos posteriores.
+- Tests BAL002: **2 OK**.
+- Siguiente especificación: `BAL003`.
+
+### BAL003 — Balance anual, comparativos y dashboard (hecho)
+
+- Se agregó reporte mensual/anual calculado desde el motor BAL002.
+- La vista `/balance/<año>/` muestra caja, cuentas por cobrar, obligaciones, resultado y variación de caja por mes.
+- Se agregó comparación de períodos mediante `comparar_periodos()`.
+- Los meses se calculan dinámicamente; no se agregan columnas mensuales ni tablas de hechos duplicados.
+- Tests BAL003: **2 OK**.
+- Siguiente especificación: `BAL004`.
+
+### BAL004 — Cierre, reproducibilidad e integración Excel (hecho)
+
+- Se creó `CierreBalance` para congelar una fotografía de una fecha de corte.
+- El cierre guarda caja, cuentas por cobrar, obligaciones, resultado, posición disponible y resumen de fuentes.
+- Se implementaron cierre idempotente, reapertura explícita y huella SHA-256 del resumen de fuentes.
+- Se agregó salida estructurada `filas_exportacion_balance()` para comparación Django/Excel sin convertir Excel en fuente oficial.
+- Los datos se reconstruyen desde FAC, FIN y obligaciones; el snapshot no duplica hechos operacionales.
+- Tests BAL004: **2 OK**.
+- Bloque BAL cerrado: `BAL001` a `BAL004`.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos

@@ -21,6 +21,7 @@ urlpatterns = [
     path("rendiciones/", include("rendiciones.urls")),
     path("facturacion/", include("facturacion.urls")),
     path("parametros/", include("core.urls")),
+    path("balance/", include("balance.urls")),
     path(
         "",
         RedirectView.as_view(pattern_name="rrhh:trabajador_lista"),

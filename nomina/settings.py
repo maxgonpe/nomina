@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'finanzas',
     'contabilidad',
     'integracion_excel',
+    'balance',
 ]
 
 MIDDLEWARE = [
