@@ -15,6 +15,20 @@ from facturacion.services.cobros import anular_cobro, registrar_cobro
 from facturacion.services.documentos_compra import anular_documento_compra
 from facturacion.services.pagos_compra import anular_pago, registrar_pago
 from facturacion.services.reportes import filtrar_documentos, resumen_facturacion
+from facturacion.forms_reportes import FiltroComprasForm
+from facturacion.services.reportes_compras import resumen_compras, saldos_pendientes, totales_por_centro, totales_por_estado, totales_por_proveedor
+
+
+class ResumenComprasView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "facturacion.view_documentocompra"
+
+    def get(self, request):
+        form = FiltroComprasForm(request.GET or None)
+        contexto = {"form": form}
+        if form.is_valid():
+            filtros = {k: v for k, v in form.cleaned_data.items() if v not in (None, "") and k not in {"anio", "mes"}}
+            contexto.update(resumen=resumen_compras(**filtros), por_proveedor=totales_por_proveedor(**filtros), por_centro=totales_por_centro(**filtros), por_estado=totales_por_estado(**filtros))
+        return render(request, "facturacion/compras/resumen.html", contexto)
 
 
 class ClienteListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

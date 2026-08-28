@@ -59,6 +59,36 @@ Punto de corte: **27 de agosto de 2026**, al cerrar **COM001 — Maestro de prov
 - Regresión transversal: `rrhh facturacion rendiciones`, 113 tests OK.
 - Ciclo de parches concluido.
 
+### COM004-R — Fuente documental e IVA de compras (hecho)
+
+- Se agregó `facturacion.services.iva_compras` como fuente derivada de `DocumentoCompra` para Impuestos.
+- Incluye filtros por período, proveedor, centro de costo y tipo documental.
+- Excluye anulados, conserva documentos no pagados y aplica signos automáticos a notas de crédito.
+- Entrega resumen, detalle suficiente para IMP, agrupaciones y validación de consistencia matemática.
+- No se creó tabla mensual ni entrada manual de IVA.
+- Tests de Facturación: 26 OK.
+- Siguiente especificación: `COM005-R`.
+
+### COM005-R — Consultas, reportes y saldos de compras (hecho)
+
+- Se agregó `facturacion.services.reportes_compras` para separar compras documentadas de pagos reales.
+- Incluye resumen, filtros, agrupaciones por proveedor/centro/estado, saldos actuales e históricos y pagos por fecha de pago.
+- Se agregó `FiltroComprasForm` y la vista `/facturacion/compras/resumen/` con filtros GET.
+- Se preparó `filas_exportacion_compras()` sin escribir Excel ni duplicar datos.
+- Los anulados y pagos anulados no contaminan los totales oficiales.
+- Tests de Facturación: 26 OK.
+- Siguiente especificación: `COM006-R`.
+
+### COM006-R — Integración de Compras (hecho)
+
+- Se agregó `facturacion.services.integracion_compras` con salidas separadas para Impuestos, Finanzas y Excel.
+- Impuestos recibe documentos de compra y sus snapshots, sin pagos ni reglas de crédito fiscal.
+- Finanzas recibe únicamente pagos vigentes, individualmente, con fecha de pago, centro, proveedor y clave idempotente de origen.
+- Excel recibe estructuras derivadas de documentos y pagos; no recalcula ni se convierte en fuente oficial.
+- El bloque Compras queda cerrado: `COM001` a `COM006-R`.
+- Tests de Facturación: 29 OK.
+- Siguiente bloque: `IMP001`.
+
 Al retomar: leer `CONTEXTO.md` → este archivo → skill `.cursor/skills/nomina-sistema/SKILL.md` → mini-spec del siguiente bloque. **No rehacer** REM001–REM010 ni REN001–REN007.
 
 ## Dónde estamos

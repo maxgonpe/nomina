@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from core.validators import normalizar_rut, validar_rut
 from core.models import CentroCosto
 from facturacion.models import Cliente, CobroDocumentoTributario, DocumentoCompra, DocumentoTributario, Obra, PagoDocumentoCompra, Proveedor
+from facturacion.forms_reportes import FiltroComprasForm
 from facturacion.services.documentos import calcular_documento
 
 

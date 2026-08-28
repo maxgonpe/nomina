@@ -16,6 +16,7 @@ urlpatterns = [
     path("proveedores/<int:pk>/editar/", views.ProveedorUpdateView.as_view(), name="proveedor_editar"),
     path("proveedores/<int:pk>/desactivar/", views.ProveedorDesactivarView.as_view(), name="proveedor_desactivar"),
     path("compras/", views.DocumentoCompraListView.as_view(), name="compra_lista"),
+    path("compras/resumen/", views.ResumenComprasView.as_view(), name="compras_resumen"),
     path("compras/nueva/", views.DocumentoCompraCreateView.as_view(), name="compra_crear"),
     path("compras/<int:pk>/", views.DocumentoCompraDetailView.as_view(), name="compra_detalle"),
     path("compras/<int:pk>/editar/", views.DocumentoCompraUpdateView.as_view(), name="compra_editar"),

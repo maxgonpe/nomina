@@ -167,6 +167,12 @@ Al retomar: **CONTEXTO.md → SEGUIMIENTO.md → skill → referencia-bloque2 �
 
 `P01` está concluido: se hizo revisión transversal de entradas, derivados, snapshots, estados y anulaciones en los módulos principales. Los formularios de Contratos y Obras ya no permiten editar directamente sus estados. La regresión `rrhh facturacion rendiciones` pasa con 113 tests; no quedan parches funcionales pendientes.
 
+`COM004-R` está aplicado: `facturacion.services.iva_compras` agrega documentos de compra no anulados por período documental, proveedor, centro y tipo, con soporte de notas de crédito/débito, consistencia y salida documental para IMP. La suite `facturacion` pasa con 26 tests. El siguiente paso es `COM005-R`.
+
+`COM005-R` está aplicado: `facturacion.services.reportes_compras` separa métricas documentales y pagos, calcula saldos actuales o a fecha de corte, agrupa resultados y prepara filas de exportación. Se agregó el resumen web con filtros GET. La suite `facturacion` pasa con 26 tests. El siguiente paso es `COM006-R`.
+
+`COM006-R` está aplicado: `facturacion.services.integracion_compras` formaliza las salidas separadas hacia Impuestos (`DocumentoCompra`), Finanzas (`PagoDocumentoCompra`) y Excel, con identidad de origen para idempotencia y exclusión de anulados. El bloque COM queda cerrado y la suite `facturacion` pasa con 29 tests. El siguiente bloque es `IMP001`.
+
 | ID | Qué | Estado |
 |----|-----|--------|
 | REM001–010 | Remuneraciones completas | Hecho |
